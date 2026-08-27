@@ -1,0 +1,37 @@
+# WitnessMark backend -- Fly.io app config.
+#
+# Must be on 24/7: auto_stop_machines is OFF and min_machines_running is 1,
+# so Fly never scales this to zero on idle (the default "scale to zero"
+# behavior would kill uptime between requests). Combined with the
+# [[restart]] policy, a crashed or unhealthy machine is restarted
+# automatically rather than staying down.
+app = "witnessmark-api"
+primary_region = "iad"
+
+[build]
+
+[env]
+  NODE_ENV = "production"
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "15s"
+    method = "GET"
+    timeout = "5s"
+    path = "/healthz"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+
+[[restart]]
+  policy = "always"
