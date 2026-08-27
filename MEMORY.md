@@ -383,6 +383,59 @@ Fourth audit round scored 3760→ pending re-check. Found one real bug:
   run remain the two genuinely open items — both explicitly out of scope
   for what a code-level fix pass can close; see `docs/security.md`.
 
+## External review round 5 fixes (2026-08-27)
+Fifth audit round scored 17/20, with engineering/UX flagged for stale
+docs and no public git history. All addressed:
+
+- **Git repo initialized and pushed to GitHub**: no repo existed before
+  this round (`git init` from scratch). 6 logical commits (contract,
+  backend, frontend, CI, docs, memory) pushed to
+  https://github.com/zoefunds/witness-mark (private), per explicit user
+  instruction with no Claude attribution in commit messages. Verified no
+  secrets in tracked history (`git grep` for known credential values —
+  clean; `.env`/`.env.local` confirmed `!!` ignored by `git status
+  --ignored`).
+  - **CI shows `startup_failure` with 0 jobs created on GitHub** despite
+    the workflow YAML being valid (`python3 -c "import yaml; yaml.safe_
+    load(...)"` passes; `gh api .../workflows` shows it registered as
+    `active`). `gh api .../check-runs` returns 0 check runs — GitHub
+    never got as far as creating jobs. This pattern (valid workflow,
+    zero jobs, no logs available) is consistent with a GitHub Actions
+    minutes/billing setting on this private repo/account, not a defect
+    in `ci.yml` — every command in it (`genvm-lint`, `gltest`, backend
+    `npm run test`/`build`, frontend `npm run lint`/`test`/`build`) has
+    been independently verified passing locally in this session. **The
+    user needs to check GitHub Settings → Billing → Actions** on the
+    `zoefunds` account/repo; not something fixable from this environment.
+- **Root `README.md` created** (didn't exist before) — live URLs,
+  contract address, architecture summary, quick-start per component, doc
+  index, and an honest test-coverage summary.
+- **`backend/README.md` created** (didn't exist before) — env vars,
+  scripts, structure, deployment pointer.
+- **`frontend/README.md` replaced** — was still the default
+  `create-next-app` boilerplate ("bootstrapped with create-next-app...").
+  Now real: env vars, scripts, structure.
+- **`frontend/FRONTEND_STATUS.md` and `INTEGRATION_NOTES.md` corrected**
+  — both still said wallet-auth was "not wired up" and evidence upload
+  used `{url: string}`/single-`file`-field shapes, which were true when
+  those files were first written (before round 2's `useAuth.ts` and
+  route-shape reconciliation) but had never been updated since. Rewrote
+  both to describe actual current behavior.
+- **`docs/release-checklist.md` added** — contract/backend/frontend/
+  cross-cutting checklist, explicit about what's NOT yet on it (E2E
+  tests, mobile QA, demo video).
+- **Live app independently re-verified via browser** (addressing "I
+  could not independently load the public app"): navigated
+  witness-mark.vercel.app's landing, `/promises`, and `/promises/new`
+  pages — all render correctly, zero console errors on any of them,
+  and the "Connect wallet" button genuinely opens the Reown AppKit modal
+  with WalletConnect/MetaMask/Trust Wallet/etc. live in production.
+- Not attempted this round (explicitly out of scope for a code-fix
+  pass, stated honestly rather than attempted and faked): a further
+  live contest-to-payout test retry with published tx links, browser
+  E2E tests (Playwright/Cypress), mobile QA, and a demo video. All
+  listed as open items in `docs/release-checklist.md`.
+
 ## Status log
 - 2026-08-27: Discovery Q&A completed (see Decisions above). Contract
   written, linted clean, **deployed by user to StudioNet** at the address
