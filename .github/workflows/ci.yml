@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  contract-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install genvm-linter
+      - run: genvm-lint check contracts/witnessmark_contract.py --json
+
+  # Deploys a fresh contract instance to StudioNet per test and runs the
+  # fast, deterministic subset for real. StudioNet is gasless, so this
+  # needs no funded/secret account -- gltest generates ephemeral test
+  # accounts itself. Verified locally: 17/17 passing, ~14 minutes real
+  # time. `timeout-minutes` bounds a hung/slow network run rather than
+  # blocking the workflow indefinitely. The `slow` subset (real
+  # nondeterministic adjudication, real 5-minute timeout sleep) is
+  # deliberately NOT run in routine CI -- run it manually
+  # (`gltest tests/integration/test_witnessmark_lifecycle.py -v -m slow`)
+  # or on a schedule instead.
+  contract-integration:
+    runs-on: ubuntu-latest
+    needs: contract-lint
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install genlayer-test
+      - run: gltest tests/integration/test_witnessmark_lifecycle.py -v -m "not slow"
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm install
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_REOWN_PROJECT_ID: "ci-placeholder"
+          NEXT_PUBLIC_API_URL: "https://witnessmark-api.fly.dev"
+          NEXT_PUBLIC_GENLAYER_CHAIN_ID: "61999"
+          NEXT_PUBLIC_GENLAYER_RPC_URL: "https://studio.genlayer.com/api"
+          NEXT_PUBLIC_CONTRACT_ADDRESS: "0x0000000000000000000000000000000000000000"
