@@ -436,6 +436,50 @@ docs and no public git history. All addressed:
   E2E tests (Playwright/Cypress), mobile QA, and a demo video. All
   listed as open items in `docs/release-checklist.md`.
 
+## External review round 6 fixes (2026-08-27)
+Sixth audit round scored 19/20, asking for one proof artifact to make
+the frontend score unambiguous: browser E2E, a demo video, or mobile QA.
+User explicitly said no screen recording/video needed. Addressed:
+
+- **Real mobile QA pass found a real, meaningful bug**: the header nav
+  (`frontend/components/NavHeader.tsx`) was `hidden md:flex` with **no
+  mobile fallback at all** — Dashboard/Promises/New Promise were
+  completely unreachable on a mobile viewport, no hamburger menu, no
+  alternative navigation. Found by actually resizing the browser to a
+  mobile viewport and looking, not by reading code. Fixed with a proper
+  hamburger button + slide-down panel (`aria-expanded`, `aria-controls`,
+  closes on navigation). Frontend rebuilt clean and redeployed.
+- **Playwright E2E suite added** (`frontend/e2e/navigation.spec.ts`,
+  `playwright.config.ts`), run against the LIVE deployed app (not a
+  local/mocked copy), two real browser engines: `desktop-chromium` and
+  `mobile` (WebKit — genuine mobile Safari engine via Playwright's
+  iPhone 13 profile). **Live-verified 18/18 passing**: every page loads
+  with zero unexpected console errors, desktop nav navigates correctly,
+  the mobile hamburger menu opens/navigates/closes correctly (a standing
+  regression test for the bug above), and "Connect wallet" genuinely
+  opens the Reown AppKit modal on both desktop and mobile.
+  - Two real test-writing bugs caught and fixed along the way: an
+    ambiguous `getByRole("link", {name:"Dashboard"})` locator that
+    matched both the header nav AND the footer's own Dashboard link
+    (fixed by scoping to the header `<nav>` landmark); and a WebKit-only
+    timeout on `/promises/new` caused by testing for the `load` event
+    on a page that opens a long-lived WalletConnect relay WebSocket
+    (`load` may never fire while that's open — switched to
+    `domcontentloaded` + waiting for the header to render, which is what
+    the test actually needed to check).
+  - Wired into CI as a new `frontend-e2e` job.
+- **Honestly scoped, not overclaimed**: this suite does NOT cover a full
+  signed-transaction journey (connect → create → accept → upload →
+  submit → resolve → contest/finalize) — that needs a wallet-mocking
+  harness (an injected EIP-1193 provider backed by a real signing key,
+  bridged to a live StudioNet RPC) that wasn't built this round; a
+  reasonably complex, genuinely separate piece of infrastructure I chose
+  not to fake. Every individual contract operation in that journey IS
+  already independently verified live via `gltest` instead — documented
+  precisely in `docs/testing.md` so this isn't a silent gap.
+- No demo video produced (user explicitly said not needed).
+- `docs/testing.md` and `docs/release-checklist.md` updated accordingly.
+
 ## Status log
 - 2026-08-27: Discovery Q&A completed (see Decisions above). Contract
   written, linted clean, **deployed by user to StudioNet** at the address

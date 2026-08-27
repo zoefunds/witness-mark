@@ -25,6 +25,7 @@ checked — see `docs/security.md` for what's already covered).
 - [ ] `npm run lint && npm run test && npm run build` all pass.
 - [ ] `vercel deploy --prod` completes; the live URL returns 200 on `/` and a sample `/promises/[id]`.
 - [ ] Env vars match the current contract address / API URL.
+- [ ] `npm run test:e2e` passes against the live deployed URL (both `desktop-chromium` and `mobile`/WebKit projects) — catches page-load regressions and nav-layer bugs (e.g. the mobile-menu bug found and fixed 2026-08-27) that unit tests can't see.
 
 ## Cross-cutting
 
@@ -34,8 +35,10 @@ checked — see `docs/security.md` for what's already covered).
 
 ## Not yet part of this checklist (fast-follows)
 
-- Browser end-to-end tests (Playwright/Cypress) covering the full
-  create → accept → submit evidence → resolve → contest/finalize journey
-  against a live testnet, with published transaction links.
-- Mobile QA pass.
+- Browser E2E covering a full SIGNED-transaction journey (create →
+  accept → submit evidence → resolve → contest/finalize) — needs a
+  wallet-mocking harness (injected EIP-1193 provider backed by a real
+  signing key, bridged to a live StudioNet RPC). Page-load/navigation
+  E2E and the individual contract operations are both already covered
+  live (Playwright + `gltest` respectively) — see `docs/testing.md`.
 - A demo video.

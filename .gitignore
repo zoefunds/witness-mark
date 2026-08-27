@@ -15,3 +15,6 @@ __pycache__/
 artifacts/
 .pytest_cache/
 coverage/
+test-results/
+playwright-report/
+blob-report/

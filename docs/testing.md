@@ -165,16 +165,65 @@ by deriving the `checked` flag from comparing the current address against
 the address the last completed session check was for, rather than
 resetting a boolean synchronously before the async check starts.
 
-Not yet covered: component/DOM tests (React Testing Library) and
-end-to-end browser tests (Playwright/Cypress) — everything above is
-pure-logic unit testing, not rendering or interaction testing.
+Not yet covered: component/DOM tests (React Testing Library) —
+everything above is pure-logic unit testing, not rendering or
+interaction testing. Browser E2E is covered separately, see below.
+
+## Frontend: `playwright` (browser E2E)
+
+```bash
+cd frontend
+npx playwright install --with-deps chromium webkit   # first time only
+npm run test:e2e    # runs against the LIVE deployed app by default
+```
+
+Runs against `https://witness-mark.vercel.app` by default (override with
+`PLAYWRIGHT_BASE_URL` to point at a local dev server). Two browser
+projects: `desktop-chromium` and `mobile` (WebKit — a real mobile Safari
+engine, via Playwright's iPhone 13 device profile, not just a resized
+Chromium viewport).
+
+**Verified live, most recently 2026-08-27: 18/18 passing** across both
+projects — every page (`/`, `/dashboard`, `/promises`, `/promises/new`,
+`/wallet`) loads with zero unexpected console errors, header nav
+navigates correctly on desktop, and the "Connect wallet" button
+genuinely opens the Reown AppKit modal on both desktop and mobile.
+
+This suite is also what caught and confirmed the fix for a real bug: the
+header nav (`components/NavHeader.tsx`) was `hidden md:flex` with **no
+mobile fallback at all** — Dashboard/Promises/New Promise were completely
+unreachable on a mobile viewport, found during a manual mobile QA pass
+and confirmed by first writing a failing E2E test, then adding a proper
+hamburger menu, then watching the same test pass. The
+`test.describe("mobile navigation")` block's first test is a standing
+regression test for exactly this.
+
+**What this suite does NOT cover, honestly**: the full connect → create
+→ accept → authenticated evidence upload → submit → resolve →
+contest/finalize journey with real signed transactions. Wallet
+connection itself (opening the AppKit modal) is verified; actually
+completing a signed transaction through it is not, because that needs a
+wallet-mocking harness — an injected EIP-1193 provider backed by a real
+signing key (e.g. a viem local account), bridged through Playwright to a
+live StudioNet RPC so `eth_sendTransaction`/`personal_sign` calls are
+answered with real signatures — which does not exist yet. Every
+individual contract operation in that journey IS independently verified
+live against StudioNet already, just via `gltest` (see above) rather
+than a browser click-through: creation, acceptance, evidence submission
+(including the domain-independence and deadline rules), adjudication
+(including prompt-injection resistance), and the contest bond check are
+all covered by real on-chain transactions in the `gltest` suite. What a
+browser-driven E2E adds beyond that is proof the UI itself correctly
+drives those same operations — a real gap, just a different and smaller
+one than "nothing is tested live."
 
 ## CI
 
 `.github/workflows/ci.yml` runs, on every push: `genvm-lint`, the fast
 `gltest` subset (`contract-integration` job — a real StudioNet run, not
-just lint, ~17 minutes), backend typecheck + `vitest` + build, and
-frontend lint + `vitest` + build. The slow `gltest` subset and a formal
+just lint, ~17 minutes), backend typecheck + `vitest` + build, frontend
+lint + `vitest` + build, and frontend Playwright E2E (`frontend-e2e` job)
+against the live deployed app. The slow `gltest` subset and a formal
 third-party security audit are deliberately NOT part of routine CI
 (cost/time), and should instead run on a schedule or before any
 mainnet-equivalent deployment.

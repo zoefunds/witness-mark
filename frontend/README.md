@@ -36,10 +36,11 @@ of crashing.
 ## Scripts
 
 ```bash
-npm run dev      # dev server
-npm run build    # production build
-npm run lint     # eslint
-npm run test     # vitest — pure-logic unit tests (lib/actions.ts, lib/format.ts)
+npm run dev       # dev server
+npm run build     # production build
+npm run lint      # eslint
+npm run test      # vitest — pure-logic unit tests (lib/actions.ts, lib/format.ts)
+npm run test:e2e  # playwright — browser E2E against the live deployed app (see docs/testing.md)
 ```
 
 ## Structure

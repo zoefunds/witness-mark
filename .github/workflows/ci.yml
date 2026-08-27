@@ -77,3 +77,26 @@ jobs:
           NEXT_PUBLIC_GENLAYER_CHAIN_ID: "61999"
           NEXT_PUBLIC_GENLAYER_RPC_URL: "https://studio.genlayer.com/api"
           NEXT_PUBLIC_CONTRACT_ADDRESS: "0x0000000000000000000000000000000000000000"
+
+  # Real browser E2E tests against the LIVE deployed app (Chromium +
+  # WebKit, i.e. real mobile Safari engine) -- page health, navigation,
+  # the mobile hamburger menu, and the wallet-connect modal. Does not
+  # cover signed on-chain transactions (see e2e/navigation.spec.ts's own
+  # header comment for exactly why and what would be needed); that path
+  # is covered live instead by the gltest suite (contract-integration job
+  # above) against the contract directly.
+  frontend-e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm install
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:e2e
