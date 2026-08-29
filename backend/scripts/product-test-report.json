@@ -1,0 +1,596 @@
+{
+  "accounts": {
+    "nexus": {
+      "label": "Nexus Automation Labs",
+      "address": "0xc4e8a4B82EB67d38cF4A925AD142D7aBeC4a979D"
+    },
+    "vertex": {
+      "label": "Vertex Systems Inc.",
+      "address": "0x906a848C0b794d498A69E86942F709eBfCBFb233"
+    },
+    "meridian": {
+      "label": "Meridian Components Ltd.",
+      "address": "0xE226388BACbcA7e7f69B72C69Cd5Fa528A424153"
+    },
+    "atlas": {
+      "label": "Atlas Manufacturing Co.",
+      "address": "0x5352DB0024dF0FBcFAd61fB0fF499F0C459371b0"
+    },
+    "orion": {
+      "label": "Orion Creative Co.",
+      "address": "0xBD076bA01917DD74C6A5b2edBaf8D4f1a4eF0dF7"
+    },
+    "luma": {
+      "label": "Luma Studio",
+      "address": "0x877d448E31b8321E48A2077dF934CB0a5353863a"
+    },
+    "kai": {
+      "label": "Kai Chen",
+      "address": "0xa1a42D0A397e723bE64fC621069b0dA764359021"
+    },
+    "reyes": {
+      "label": "Reyes Fitness Coaching",
+      "address": "0xa9f5ADb044600D7FF871A155C873225ab7e9E174"
+    },
+    "watchdog": {
+      "label": "Community Watchdog Bot",
+      "address": "0x55712D070A9fa5C3F412b9643c0c6e98D801c9ce"
+    }
+  },
+  "promiseIds": {
+    "s1": 2,
+    "s2": 3,
+    "s3": 4,
+    "s4": 1
+  },
+  "log": [
+    {
+      "section": "ACCOUNTS",
+      "nexus": "0xc4e8a4B82EB67d38cF4A925AD142D7aBeC4a979D",
+      "vertex": "0x906a848C0b794d498A69E86942F709eBfCBFb233",
+      "meridian": "0xE226388BACbcA7e7f69B72C69Cd5Fa528A424153",
+      "atlas": "0x5352DB0024dF0FBcFAd61fB0fF499F0C459371b0",
+      "orion": "0xBD076bA01917DD74C6A5b2edBaf8D4f1a4eF0dF7",
+      "luma": "0x877d448E31b8321E48A2077dF934CB0a5353863a",
+      "kai": "0xa1a42D0A397e723bE64fC621069b0dA764359021",
+      "reyes": "0xa9f5ADb044600D7FF871A155C873225ab7e9E174",
+      "watchdog": "0x55712D070A9fa5C3F412b9643c0c6e98D801c9ce"
+    },
+    {
+      "section": "WRITE S4 create_promise: create_promise",
+      "hash": "0x9f80ace0f027335fb45e2fcf1f52591daf296c92650c13bd0650026c09c3a717",
+      "status": "ACCEPTED",
+      "result": 6
+    },
+    {
+      "section": "S4 promise id",
+      "id": 1
+    },
+    {
+      "section": "WRITE S1 create_promise: create_promise",
+      "hash": "0x0c5a5bcb3912a8aa9e2594a57699eb8fd9cf1e11918e65b8c1904df5d80d7c65",
+      "status": "ACCEPTED",
+      "result": 6
+    },
+    {
+      "section": "S1 promise id",
+      "id": 2
+    },
+    {
+      "section": "WRITE S1 accept_promise: accept_promise",
+      "hash": "0x2fd661329266be46001357246ef7e6cc0a95ea22c39ad5484d8c80fa02cf387a",
+      "status": "ACCEPTED",
+      "result": 6
+    },
+    {
+      "section": "WRITE S1 submit_evidence: submit_evidence",
+      "hash": "0x6a0d471e2766ef5d4d9323fa49611583328360b1b318b236b9b51bca5f43691c",
+      "status": "ACCEPTED",
+      "result": 6
+    },
+    {
+      "section": "WRITE S1 resolve_promise: resolve_promise",
+      "hash": "0x9c0731be66a4eaa0b6c861bdd88479fceed0be5c8b628e08e4064c8aadbfe420",
+      "status": "ACCEPTED",
+      "result": 6
+    },
+    {
+      "section": "S1 post-resolve state",
+      "status": "VERDICT_PENDING",
+      "verdict_band": "FULFILLED",
+      "verdict_evidence_hash": "7b838fa4b26c77ca0ebb4691b112befc7355543d35f4a7f7358b7e1eb95232df"
+    },
+    {
+      "section": "WRITE S1 contest_verdict: contest_verdict",
+      "hash": "0xb936d0283c641ec14cd077a9632b9db122fa370dca988fe5c90b031b078be6ad",
+      "status": "ACCEPTED",
+      "result": 6
+    },
+    {
+      "section": "WRITE S1 resolve_contest: resolve_contest",
+      "hash": "0x6940e831faa7394e519cc8d9eb91e0dd70405179445b46400e9ee4586ffa8bfb",
+      "status": "ACCEPTED",
+      "result": 6
+    },
+    {
+      "section": "S1 final state",
+      "accept_by_ts": 1788018465,
+      "category": "services",
+      "conditions": "The submitted evidence URL must resolve to a live, publicly reachable HTML document returned with a successful HTTP status, demonstrating the endpoint is actually deployed and reachable -- not merely claimed in the delivery note.",
+      "contest_bond_deposited_wei": 0,
+      "contest_bond_wei": "300000000000000000",
+      "contest_count": 1,
+      "contest_outcome": "UPHELD",
+      "contester": "0x906a848C0b794d498A69E86942F709eBfCBFb233",
+      "counterparty": "0x906a848C0b794d498A69E86942F709eBfCBFb233",
+      "created_ts": 1788017865,
+      "creator": "0xc4e8a4B82EB67d38cF4A925AD142D7aBeC4a979D",
+      "creator_payout_bps": 0,
+      "evidence_by_ts": 1788018775,
+      "evidence_note": "Endpoint verified live via direct browser check and automated curl from our staging network prior to submission; httpbin's static HTML endpoint is used here as the stand-in deployment target agreed for this validation milestone.",
+      "evidence_requirements": "A direct link to the live deployed page. No screenshots or third-party claims accepted -- the contract fetches the URL itself.",
+      "evidence_submitted_ts": 1788017885,
+      "evidence_urls": [
+        "https://httpbin.org/html"
+      ],
+      "final_band": "FULFILLED",
+      "final_creator_payout_bps": 0,
+      "finalized_ts": 1788017916,
+      "id": 2,
+      "resolve_attempts": 1,
+      "resolved_ts": 1788017891,
+      "stake_deposited_wei": 0,
+      "stake_wei": "2000000000000000000",
+      "statement": "Nexus Automation Labs' autonomous coding agent will deliver a publicly reachable, live HTTP health-check endpoint for Vertex Systems Inc.'s integration environment, confirming the agreed deployment succeeded.",
+      "status": "FULFILLED",
+      "title": "AI Agent API Health-Check Endpoint Delivery",
+      "verdict_band": "FULFILLED",
+      "verdict_evidence_hash": "7b838fa4b26c77ca0ebb4691b112befc7355543d35f4a7f7358b7e1eb95232df",
+      "verdict_reasoning": "The submitted evidence URL is a direct link, https://httpbin.org/html, and the fetched content shows a live HTML document titled with visible page text beginning “Herman Melville - Moby-Dick.” This satisfies the measurable requirement that the evidence URL resolve to a publicly reachable HTML document rather than a mere delivery claim. Section A does not require the page to contain specific health-check text, only that the submitted URL itself be live, reachable, and return HTML demonstrating deployment reachability."
+    },
+    {
+      "section": "WRITE S2 create_promise: create_promise",
+      "hash": "0xb0bbbd818d92789e98186823fa5d4e4f69700d4cabbc024165e8a96b39d61dcd",
+      "status": "ACCEPTED",
+      "result": 6
+    },
+    {
+      "section": "S2 promise id",
+      "id": 3
+    },
+    {
+      "section": "WRITE S2 accept_promise: accept_promise",
+      "hash": "0x2f3fb53d4036e826ad90d2550a037718543998b08b067d1cd3546c35b23c4fd0",
+      "status": "ACCEPTED",
+      "result": 6
+    },
+    {
+      "section": "WRITE S2 submit_evidence: submit_evidence",
+      "hash": "0x1b1e0400ab85d6b2f441d666b7f99bdd2cffd6c87e2dc964c804d97712105019",
+      "status": "ACCEPTED",
+      "result": 6
+    },
+    {
+      "section": "WRITE S2 resolve_promise: resolve_promise",
+      "hash": "0x6f2eda1ed9004b8e10d2132cdf0b44f47b6c1375a7df7272c8dbf26ba37dfe8f",
+      "status": "ACCEPTED",
+      "result": 6
+    },
+    {
+      "section": "S2 post-resolve state",
+      "status": "UNDETERMINED",
+      "verdict_band": "NONE"
+    },
+    {
+      "section": "S2 note",
+      "note": "First resolve landed on UNDETERMINED, not VERDICT_PENDING -- skipping contest for this promise."
+    },
+    {
+      "section": "S2 final state",
+      "accept_by_ts": 1788018546,
+      "category": "procurement",
+      "conditions": "Independent, third-party-reachable documentation must corroborate BOTH that (a) a real shipment/tracking record exists for this consignment and (b) reference technical documentation for the specified component standard is genuinely publicly available, from two independently-hosted sources -- consistent with this promise's high-value, multi-source evidence requirement.",
+      "contest_bond_deposited_wei": 0,
+      "contest_bond_wei": 0,
+      "contest_count": 0,
+      "contest_outcome": "",
+      "contester": "",
+      "counterparty": "0x5352DB0024dF0FBcFAd61fB0fF499F0C459371b0",
+      "created_ts": 1788017946,
+      "creator": "0xE226388BACbcA7e7f69B72C69Cd5Fa528A424153",
+      "creator_payout_bps": 0,
+      "evidence_by_ts": 1788018856,
+      "evidence_note": "First source: shipment system response record (httpbin's stable JSON test endpoint stands in for our carrier's tracking API for this validation run). Second source, on a distinct domain: W3C's own site, standing in for the publicly documented technical standard reference required by this promise's evidence policy.",
+      "evidence_requirements": "At least two evidence URLs hosted on two different domains: one demonstrating shipment/tracking existence, one demonstrating the referenced technical standard is publicly documented.",
+      "evidence_submitted_ts": 1788017961,
+      "evidence_urls": [
+        "https://httpbin.org/json",
+        "https://www.w3.org/"
+      ],
+      "final_band": "NONE",
+      "final_creator_payout_bps": 0,
+      "finalized_ts": 0,
+      "id": 3,
+      "resolve_attempts": 1,
+      "resolved_ts": 0,
+      "stake_deposited_wei": "1000000000000000000000",
+      "stake_wei": "1000000000000000000000",
+      "statement": "Meridian Components Ltd. promises that the shipment of precision-machined components dispatched to Atlas Manufacturing Co. matches the approved sample specification and is accompanied by a valid certificate of conformance.",
+      "status": "UNDETERMINED",
+      "title": "Bulk Precision Component Shipment Conformance",
+      "verdict_band": "NONE",
+      "verdict_evidence_hash": "",
+      "verdict_reasoning": ""
+    },
+    {
+      "section": "WRITE S3 create_promise: create_promise",
+      "hash": "0xd70ee29af7898e4a180d6dc9ab4d7741c1f0062e163bd353b92c5fc27a131702",
+      "status": "ACCEPTED",
+      "result": 6
+    },
+    {
+      "section": "S3 promise id",
+      "id": 4
+    },
+    {
+      "section": "WRITE S3 cancel_promise: cancel_promise",
+      "hash": "0x262e2fcb799f8019889c1f0b6e7644293d0822e1d0c437c21c8039dc58db7367",
+      "status": "ACCEPTED",
+      "result": 6
+    },
+    {
+      "section": "S3 final state",
+      "accept_by_ts": 1788018597,
+      "category": "creative",
+      "conditions": "Final delivered artwork must match the agreed brief: three full-color editorial illustrations at the specified resolution, delivered as a public portfolio link.",
+      "contest_bond_deposited_wei": 0,
+      "contest_bond_wei": 0,
+      "contest_count": 0,
+      "contest_outcome": "",
+      "contester": "",
+      "counterparty": "0x877d448E31b8321E48A2077dF934CB0a5353863a",
+      "created_ts": 1788017997,
+      "creator": "0xBD076bA01917DD74C6A5b2edBaf8D4f1a4eF0dF7",
+      "creator_payout_bps": 0,
+      "evidence_by_ts": 900,
+      "evidence_note": "",
+      "evidence_requirements": "A link to the published illustration set.",
+      "evidence_submitted_ts": 0,
+      "evidence_urls": [],
+      "final_band": "NONE",
+      "final_creator_payout_bps": 0,
+      "finalized_ts": 1788018007,
+      "id": 4,
+      "resolve_attempts": 0,
+      "resolved_ts": 0,
+      "stake_deposited_wei": 0,
+      "stake_wei": "250000000000000000",
+      "statement": "Orion Creative Co. stakes a commission deposit behind a planned editorial illustration package with Luma Studio, pending final scope confirmation.",
+      "status": "CANCELLED",
+      "title": "Editorial Illustration Commission Deposit",
+      "verdict_band": "NONE",
+      "verdict_evidence_hash": "",
+      "verdict_reasoning": ""
+    },
+    {
+      "section": "WRITE S4 timeout_unaccepted_reclaim: timeout_unaccepted_reclaim",
+      "hash": "0x170a9feeccb8f7171cb5233e97e94b26e65cc58542a0d5f7e72fb150707d4bee",
+      "status": "ACCEPTED",
+      "result": 6
+    },
+    {
+      "section": "S4 final state",
+      "accept_by_ts": 1788018155,
+      "category": "other",
+      "conditions": "Reyes Fitness Coaching must formally accept this accountability arrangement within the acceptance window before the program clock starts. If Reyes does not accept in time, the arrangement never begins and Kai's stake is not truly at risk under an unaccepted commitment.",
+      "contest_bond_deposited_wei": 0,
+      "contest_bond_wei": 0,
+      "contest_count": 0,
+      "contest_outcome": "",
+      "contester": "",
+      "counterparty": "0xa9f5ADb044600D7FF871A155C873225ab7e9E174",
+      "created_ts": 1788017855,
+      "creator": "0xa1a42D0A397e723bE64fC621069b0dA764359021",
+      "creator_payout_bps": 0,
+      "evidence_by_ts": 1200,
+      "evidence_note": "",
+      "evidence_requirements": "N/A prior to acceptance.",
+      "evidence_submitted_ts": 0,
+      "evidence_urls": [],
+      "final_band": "NONE",
+      "final_creator_payout_bps": 0,
+      "finalized_ts": 1788018179,
+      "id": 1,
+      "resolve_attempts": 0,
+      "resolved_ts": 0,
+      "stake_deposited_wei": 0,
+      "stake_wei": "50000000000000000",
+      "statement": "Kai Chen stakes GEN behind completing a self-reported 30-day strength training program under Reyes Fitness Coaching's accountability plan, with Reyes as the named beneficiary if the commitment lapses unacknowledged.",
+      "status": "TIMEOUT_UNACCEPTED",
+      "title": "30-Day Strength Program Accountability Stake",
+      "verdict_band": "NONE",
+      "verdict_evidence_hash": "",
+      "verdict_reasoning": ""
+    },
+    {
+      "section": "get_promise_count",
+      "value": 5
+    },
+    {
+      "section": "get_platform_stats",
+      "total_broken": 0,
+      "total_contests": 1,
+      "total_fulfilled": 1,
+      "total_partial": 0,
+      "total_promises": 5,
+      "total_volume_wei": "1002310000000000000000"
+    },
+    {
+      "section": "get_config",
+      "contest_bond_bps": 1500,
+      "contest_window_seconds": 172800,
+      "max_accept_window_seconds": 5184000,
+      "max_evidence_items": 8,
+      "max_evidence_window_seconds": 31536000,
+      "max_resolve_attempts": 5,
+      "min_accept_window_seconds": 300,
+      "min_evidence_window_seconds": 300,
+      "undetermined_grace_seconds": 259200
+    },
+    {
+      "section": "get_party_promise_ids(nexus)",
+      "address": "0xc4e8a4B82EB67d38cF4A925AD142D7aBeC4a979D",
+      "ids": [
+        2
+      ]
+    },
+    {
+      "section": "get_party_promise_ids(vertex)",
+      "address": "0x906a848C0b794d498A69E86942F709eBfCBFb233",
+      "ids": [
+        2
+      ]
+    },
+    {
+      "section": "get_party_promise_ids(meridian)",
+      "address": "0xE226388BACbcA7e7f69B72C69Cd5Fa528A424153",
+      "ids": [
+        3
+      ]
+    },
+    {
+      "section": "get_party_promise_ids(atlas)",
+      "address": "0x5352DB0024dF0FBcFAd61fB0fF499F0C459371b0",
+      "ids": [
+        3
+      ]
+    },
+    {
+      "section": "get_party_promise_ids(orion)",
+      "address": "0xBD076bA01917DD74C6A5b2edBaf8D4f1a4eF0dF7",
+      "ids": [
+        4
+      ]
+    },
+    {
+      "section": "get_party_promise_ids(luma)",
+      "address": "0x877d448E31b8321E48A2077dF934CB0a5353863a",
+      "ids": [
+        4
+      ]
+    },
+    {
+      "section": "get_party_promise_ids(kai)",
+      "address": "0xa1a42D0A397e723bE64fC621069b0dA764359021",
+      "ids": [
+        1
+      ]
+    },
+    {
+      "section": "get_party_promise_ids(reyes)",
+      "address": "0xa9f5ADb044600D7FF871A155C873225ab7e9E174",
+      "ids": [
+        1
+      ]
+    },
+    {
+      "section": "get_party_promise_ids(watchdog)",
+      "address": "0x55712D070A9fa5C3F412b9643c0c6e98D801c9ce",
+      "ids": []
+    },
+    {
+      "section": "get_promise_summary(2)",
+      "final_band": "FULFILLED",
+      "id": 2,
+      "stake_wei": "2000000000000000000",
+      "status": "FULFILLED"
+    },
+    {
+      "section": "get_activity(2)",
+      "activity": [
+        {
+          "actor": "0x55712D070A9fa5C3F412b9643c0c6e98D801c9ce",
+          "amount": "300000000000000000",
+          "kind": "CONTEST_RESOLVED",
+          "note": "UPHELD",
+          "ts": 1788017916
+        },
+        {
+          "actor": "0x906a848C0b794d498A69E86942F709eBfCBFb233",
+          "amount": "300000000000000000",
+          "kind": "CONTESTED",
+          "note": "",
+          "ts": 1788017910
+        },
+        {
+          "actor": "0xc4e8a4B82EB67d38cF4A925AD142D7aBeC4a979D",
+          "amount": 0,
+          "kind": "VERDICT_RECORDED",
+          "note": "FULFILLED",
+          "ts": 1788017891
+        },
+        {
+          "actor": "0x906a848C0b794d498A69E86942F709eBfCBFb233",
+          "amount": 0,
+          "kind": "EVIDENCE_SUBMITTED",
+          "note": "1 item(s)",
+          "ts": 1788017885
+        },
+        {
+          "actor": "0x906a848C0b794d498A69E86942F709eBfCBFb233",
+          "amount": 0,
+          "kind": "ACCEPT",
+          "note": "",
+          "ts": 1788017875
+        },
+        {
+          "actor": "0xc4e8a4B82EB67d38cF4A925AD142D7aBeC4a979D",
+          "amount": "2000000000000000000",
+          "kind": "CREATE",
+          "note": "AI Agent API Health-Check Endpoint Delivery",
+          "ts": 1788017865
+        }
+      ]
+    },
+    {
+      "section": "get_promise_summary(3)",
+      "final_band": "NONE",
+      "id": 3,
+      "stake_wei": "1000000000000000000000",
+      "status": "UNDETERMINED"
+    },
+    {
+      "section": "get_activity(3)",
+      "activity": [
+        {
+          "actor": "0xE226388BACbcA7e7f69B72C69Cd5Fa528A424153",
+          "amount": 0,
+          "kind": "UNDETERMINED",
+          "note": "adjudication judged evidence insufficient",
+          "ts": 1788017969
+        },
+        {
+          "actor": "0x5352DB0024dF0FBcFAd61fB0fF499F0C459371b0",
+          "amount": 0,
+          "kind": "EVIDENCE_SUBMITTED",
+          "note": "2 item(s)",
+          "ts": 1788017961
+        },
+        {
+          "actor": "0x5352DB0024dF0FBcFAd61fB0fF499F0C459371b0",
+          "amount": 0,
+          "kind": "ACCEPT",
+          "note": "",
+          "ts": 1788017956
+        },
+        {
+          "actor": "0xE226388BACbcA7e7f69B72C69Cd5Fa528A424153",
+          "amount": "1000000000000000000000",
+          "kind": "CREATE",
+          "note": "Bulk Precision Component Shipment Conformance",
+          "ts": 1788017946
+        }
+      ]
+    },
+    {
+      "section": "get_promise_summary(4)",
+      "final_band": "NONE",
+      "id": 4,
+      "stake_wei": "250000000000000000",
+      "status": "CANCELLED"
+    },
+    {
+      "section": "get_activity(4)",
+      "activity": [
+        {
+          "actor": "0xBD076bA01917DD74C6A5b2edBaf8D4f1a4eF0dF7",
+          "amount": "250000000000000000",
+          "kind": "CANCEL",
+          "note": "",
+          "ts": 1788018007
+        },
+        {
+          "actor": "0xBD076bA01917DD74C6A5b2edBaf8D4f1a4eF0dF7",
+          "amount": "250000000000000000",
+          "kind": "CREATE",
+          "note": "Editorial Illustration Commission Deposit",
+          "ts": 1788017997
+        }
+      ]
+    },
+    {
+      "section": "get_promise_summary(1)",
+      "final_band": "NONE",
+      "id": 1,
+      "stake_wei": "50000000000000000",
+      "status": "TIMEOUT_UNACCEPTED"
+    },
+    {
+      "section": "get_activity(1)",
+      "activity": [
+        {
+          "actor": "0x55712D070A9fa5C3F412b9643c0c6e98D801c9ce",
+          "amount": "50000000000000000",
+          "kind": "TIMEOUT_UNACCEPTED",
+          "note": "",
+          "ts": 1788018179
+        },
+        {
+          "actor": "0xa1a42D0A397e723bE64fC621069b0dA764359021",
+          "amount": "50000000000000000",
+          "kind": "CREATE",
+          "note": "30-Day Strength Program Accountability Stake",
+          "ts": 1788017855
+        }
+      ]
+    },
+    {
+      "section": "get_reputation(nexus)",
+      "address": "0xc4e8a4B82EB67d38cF4A925AD142D7aBeC4a979D",
+      "broken": 0,
+      "contested": 1,
+      "fulfilled": 1,
+      "fulfillment_rate_bps": 10000,
+      "partially_fulfilled": 0,
+      "promises_finalized": 1,
+      "promises_made": 1,
+      "total_staked_wei": "2000000000000000000"
+    },
+    {
+      "section": "get_reputation(meridian)",
+      "address": "0xE226388BACbcA7e7f69B72C69Cd5Fa528A424153",
+      "broken": 0,
+      "contested": 0,
+      "fulfilled": 0,
+      "fulfillment_rate_bps": 0,
+      "partially_fulfilled": 0,
+      "promises_finalized": 0,
+      "promises_made": 1,
+      "total_staked_wei": "1000000000000000000000"
+    },
+    {
+      "section": "get_reputation(orion)",
+      "address": "0xBD076bA01917DD74C6A5b2edBaf8D4f1a4eF0dF7",
+      "broken": 0,
+      "contested": 0,
+      "fulfilled": 0,
+      "fulfillment_rate_bps": 0,
+      "partially_fulfilled": 0,
+      "promises_finalized": 0,
+      "promises_made": 1,
+      "total_staked_wei": "250000000000000000"
+    },
+    {
+      "section": "get_reputation(kai)",
+      "address": "0xa1a42D0A397e723bE64fC621069b0dA764359021",
+      "broken": 0,
+      "contested": 0,
+      "fulfilled": 0,
+      "fulfillment_rate_bps": 0,
+      "partially_fulfilled": 0,
+      "promises_finalized": 0,
+      "promises_made": 1,
+      "total_staked_wei": "50000000000000000"
+    }
+  ]
+}

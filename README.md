@@ -21,7 +21,7 @@ centralized backend cannot do neutrally.
 |---|---|
 | **App** | https://witness-mark.vercel.app |
 | **API** | https://witnessmark-api.fly.dev (`/healthz`, `/readyz`) |
-| **Contract** | `0x0f0f8AF4482880756469Ba02964Aef221C91613e` on GenLayer StudioNet (chain id `61999`) — view on the [GenLayer Explorer](https://genlayer-explorer.vercel.app) by searching the address |
+| **Contract** | `0x8646e58436bb191680B28b9b85b799C856CfCA64` on GenLayer StudioNet (chain id `61999`) — view on the [GenLayer Explorer](https://genlayer-explorer.vercel.app) by searching the address |
 
 ## Quick start
 
@@ -70,6 +70,7 @@ adjudication-never-converged) so funds can never be permanently stuck.
 | [`docs/architecture.md`](docs/architecture.md) | System architecture, source-of-truth split |
 | [`docs/security.md`](docs/security.md) | Threat model, known gaps |
 | [`docs/testing.md`](docs/testing.md) | How to run every test suite, live-verified results |
+| [`docs/live-product-tests.md`](docs/live-product-tests.md) | 4 real product scenarios run against the live contract, with real tx hashes |
 | [`docs/deployment.md`](docs/deployment.md) | Redeploy steps for contract/backend/frontend |
 | [`MEMORY.md`](MEMORY.md) | Full build history, decisions, and every external-review round's fixes |
 

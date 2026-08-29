@@ -102,7 +102,22 @@ with reality."
   empty — fill in once generated / once the user deploys the contract.
 
 ## Deployed contract
-- **Current address: `0x0f0f8AF4482880756469Ba02964Aef221C91613e`**
+- **Current address: `0x8646e58436bb191680B28b9b85b799C856CfCA64`**
+  (StudioNet). Fourth deployment, superseding the address below. Wired
+  into the Fly secret and Vercel env var on 2026-08-27, both
+  redeployed and confirmed live. Database confirmed already clean (all
+  tables — `promise_index`, `evidence_files`, `audit_log`, `users`,
+  `auth_nonces` — were 0 rows; no prior-contract data existed to clear).
+  **Live product-test battery run against this address**: 4 real
+  scenarios, 14/14 write transactions ACCEPTED, zero failures — see
+  `docs/live-product-tests.md` for full detail with real tx hashes, and
+  `backend/scripts/run-product-tests.cjs` / `product-test-report.json`
+  for the runnable script and raw output. One incidental promise (id 0,
+  "Validation ping") also exists from a pre-flight pipeline check before
+  the 4 real scenarios — it's a harmless, successfully-created CREATED-
+  status promise, left as-is since its creator's ephemeral key wasn't
+  retained to cancel it, and it caused no error.
+- **Prior address (superseded): `0x0f0f8AF4482880756469Ba02964Aef221C91613e`**
   (StudioNet). This is the SECOND deployment — the user redeployed after
   the round-2 review fixes (evidence deadline enforcement, evidence
   tamper-evidence hashing, domain-independent two-source rule). Live-
@@ -116,7 +131,7 @@ with reality."
   — the original deployment, predates the round-2 contract fixes. No
   longer referenced by the live app; kept here only for history/audit
   trail.
-- Deployed by the user themselves both times (as required — Claude never
+- Deployed by the user themselves every time (as required — Claude never
   deploys the contract). `GENLAYER_RPC_URL` left empty deliberately —
   genlayer-js ships a built-in studionet chain config; only set an
   explicit RPC URL if that stops being sufficient.
