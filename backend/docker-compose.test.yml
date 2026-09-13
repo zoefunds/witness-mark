@@ -1,0 +1,35 @@
+# Ephemeral, local-only Postgres + Redis for backend/tests/integration/*
+# (real-service tests, as opposed to tests/*.test.ts's mocked unit tests).
+# This has nothing to do with GenLayer -- the project's "no Docker for
+# GenLayer" rule is about the Intelligent Contract deployment path only.
+#
+# Usage:
+#   docker compose -f docker-compose.test.yml up -d
+#   npm run test:integration
+#   docker compose -f docker-compose.test.yml down -v
+#
+# CI uses GitHub Actions' native `services:` block instead (see
+# .github/workflows/ci.yml, job `backend-integration`) -- this file is for
+# local development.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: witnessmark_test
+    ports:
+      - "5546:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6391:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
