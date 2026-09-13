@@ -41,16 +41,16 @@ jobs:
   # Proves the deployed contract actually IS this repo's source, not just
   # "a" WitnessMark contract at some address. Reads the live contract's
   # exact source and method schema directly from the chain and diffs
-  # them against contracts/witnessmark_contract.py. A FAIL here means
-  # real, currently-known drift between source and the deployed instance
-  # (see docs/deployment-manifest.md for exactly what and why) -- it is
-  # the check correctly doing its job, not a broken pipeline, and stays
-  # red until the project owner redeploys. continue-on-error keeps this
-  # from blocking other jobs while that's true; remove it once a redeploy
-  # closes the gap and this job is expected to pass again.
+  # them against contracts/witnessmark_contract.py. The address below is
+  # the current production deployment (see docs/deployment-manifest.md,
+  # kept in sync with it and with backend's own GENLAYER_CONTRACT_ADDRESS
+  # secret) -- it's public information already published in README.md and
+  # the GenLayer Explorer, not a secret. A FAIL here means real source/
+  # deployment drift; it is the check correctly doing its job, not a
+  # broken pipeline. Update the address here (and in the docs/README
+  # above) immediately after any redeploy.
   deployment-verification:
     runs-on: ubuntu-latest
-    continue-on-error: true
     defaults:
       run:
         working-directory: backend
@@ -62,7 +62,7 @@ jobs:
           cache: "npm"
           cache-dependency-path: backend/package-lock.json
       - run: npm install
-      - run: node scripts/verify-deployment.mjs
+      - run: node scripts/verify-deployment.mjs 0x181eeE5ff3B1186b39f813129d57558Ad61Ff39B
 
   backend:
     runs-on: ubuntu-latest

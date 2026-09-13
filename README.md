@@ -40,7 +40,7 @@ most obviously conflicting incentives, and the highest real stakes.
 |---|---|
 | **App** | https://witness-mark.vercel.app |
 | **API** | https://witnessmark-api.fly.dev (`/healthz`, `/readyz`) |
-| **Contract** | `0x8646e58436bb191680B28b9b85b799C856CfCA64` on GenLayer StudioNet (chain id `61999`) — view on the [GenLayer Explorer](https://genlayer-explorer.vercel.app) by searching the address |
+| **Contract** | `0x181eeE5ff3B1186b39f813129d57558Ad61Ff39B` on GenLayer StudioNet (chain id `61999`) — view on the [GenLayer Explorer](https://genlayer-explorer.vercel.app) by searching the address |
 
 ## Quick start
 
@@ -130,11 +130,27 @@ structure is identical either way:
 - **Frontend**: `npm run test` — 22 tests (vitest), covering the
   client-side action-availability logic against every contract status ×
   role combination, and money/time formatting precision.
-- **Still open, honestly**: a formal third-party contract audit, a
-  completed live contest-to-payout test run (attempted three times; see
-  `docs/testing.md`'s live-run history), and browser end-to-end tests.
-  None of these block a StudioNet demo or capped-stake beta; all should
-  exist before the protocol handles meaningful, uncapped real value.
+- **Signed browser E2E**: a real, no-mocks Playwright test drives two
+  independently-injected wallets through the actual deployed UI —
+  connect → create → accept → authenticated evidence upload → submit →
+  resolve — and passed end-to-end against production, confirming every
+  step with a real on-chain tx hash. See `docs/testing.md`'s "Signed E2E"
+  section.
+- **Live contest-to-payout settlement**: a full `contest_verdict` →
+  `resolve_contest` round has completed live against StudioNet, with a
+  genuine `OVERTURNED` outcome and both the stake and the contest bond
+  paid out in the same transaction — see
+  `docs/live-product-tests.md`. That run was driven directly via
+  genlayer-js, not yet through the browser UI or the `gltest` suite's own
+  equivalent test (both still pending a run whose adjudication happens to
+  land on a recorded verdict rather than `UNDETERMINED` first — legitimate
+  LLM-sampling variance, not a bug; see `docs/testing.md`'s live-run
+  history).
+- **Still open, honestly**: a formal third-party contract audit, and the
+  browser-UI contest/`resolve_contest` branch specifically (the rest of
+  the lifecycle above IS proven through the browser). Neither blocks a
+  StudioNet demo or capped-stake beta; both should exist before the
+  protocol handles meaningful, uncapped real value.
 
 ## Stack
 
