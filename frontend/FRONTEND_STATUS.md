@@ -92,10 +92,8 @@ supported directly.
   `get_party_promise_ids` + N `get_promise` calls (client-side `useQueries` fan-out). This is
   correct but not the fastest under GenLayer StudioNet's 30 req/min cap for a wallet with many
   promises — swapping in the backend's cached `/api/promises` list endpoint would help.
-- Unit tests exist (`lib/actions.ts`, `lib/format.ts` — 22 tests, `npm run test`) but there is no
-  component/DOM (React Testing Library) or end-to-end browser (Playwright/Cypress) coverage yet.
-  A full manual click-through (connect → create → accept → submit evidence → resolve →
-  contest/finalize) against the live deployed contract has not been recorded/published with
-  transaction links — see `docs/testing.md` and `MEMORY.md` for what live contract-level testing
-  has actually been done via `gltest`, which is a different (and more thorough) kind of coverage
-  than a browser E2E click-through would add.
+- Test coverage: **`docs/testing.md` is the single authoritative source for current test status**
+  across contract/backend/frontend/E2E — deliberately not restated here, since restating exact
+  counts and coverage claims in multiple files is what caused this file to go stale in the past
+  (it previously claimed no Playwright coverage existed well after it had been added). Check
+  `docs/testing.md` directly rather than trusting a summary here.
