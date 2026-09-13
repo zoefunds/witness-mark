@@ -31,12 +31,12 @@ const steps = [
 
 const useCases = [
   {
-    title: "Verifiable work delivery",
-    body: "AI agents, freelancers, and contractors stake completion terms behind a scoped deliverable — the client submits proof of delivery, evidence is fetched and judged against exact conditions, not a subjective review.",
+    title: "Procurement & delivery assurance",
+    body: "A supplier stakes GEN behind quantity, quality, and deadline terms naming the buyer as beneficiary — real capital backing the shipment, not a purchase order the buyer just has to trust. Evidence (certificates of conformance, delivery confirmation, inspection photos) is fetched and judged against the exact criteria.",
     lead: true,
   },
+  { title: "Verifiable AI-agent & freelance work", body: "An agent operator, freelancer, or contractor stakes completion terms behind a scoped deliverable — the client submits proof of delivery, evidence is judged against exact conditions, not a subjective review." },
   { title: "Freelance & creator milestones", body: "A client or campaign sponsor stakes payment behind a scoped deliverable; the freelancer or creator submits proof of delivery." },
-  { title: "Procurement terms", body: "A buyer's supplier promise — quantity, quality, deadline — backed by real capital, not a PO." },
   { title: "Service-level promises", body: "A vendor stakes GEN behind an uptime or response-time commitment made to a customer." },
   { title: "Personal accountability", body: "Stake GEN behind a commitment to a friend, a coach, or a counterparty who benefits if you don't follow through." },
   { title: "Cross-border trust", body: "Two parties with no shared legal system settle a promise through neutral, evidence-driven adjudication." },
@@ -47,14 +47,15 @@ export default function LandingPage() {
     <div>
       <section className="border-b border-outline-variant bg-surface-container-lowest">
         <div className="mx-auto max-w-[1280px] px-4 py-20 sm:px-8 sm:py-28">
-          <p className="label-caps mb-4">GenLayer Intelligent Contracts</p>
+          <p className="label-caps mb-4">Non-custodial procurement & delivery assurance</p>
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-on-surface sm:text-5xl">
             Make promises that survive contact with reality.
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-on-surface-variant">
-            WitnessMark lets a creator stake GEN behind a real-world promise naming a counterparty. When the outcome
-            is known, evidence is submitted and a GenLayer Intelligent Contract adjudicates FULFILLED, PARTIALLY
-            FULFILLED, or BROKEN — then pays the stake out automatically.
+            A supplier stakes GEN behind measurable delivery terms — quantity, quality, deadline — naming the buyer
+            as beneficiary. Once the delivery window closes, evidence is submitted and a single GenLayer Intelligent
+            Contract fetches it itself and adjudicates FULFILLED, PARTIALLY FULFILLED, or BROKEN through independent
+            validator consensus — no operator ever decides whose money it is.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <LinkButton href="/promises/new" variant="primary">Create a promise</LinkButton>
@@ -85,9 +86,10 @@ export default function LandingPage() {
         <div className="mx-auto max-w-[1280px] px-4 py-16 sm:px-8">
           <h2 className="label-caps mb-2 border-b border-outline-variant pb-3">Use cases</h2>
           <p className="mb-8 max-w-2xl text-sm text-on-surface-variant">
-            WitnessMark is a general-purpose promise primitive, not a narrow product — but it is strongest where
-            evidence is concrete and conditions are measurable. Verifiable work delivery is the clearest starting
-            point; the same primitive extends to any evidence-rich commitment below.
+            Procurement and delivery assurance is what WitnessMark is built and documented around: the clearest
+            measurable criteria, the most directly conflicting incentives between the parties, and the highest real
+            stakes. The same underlying promise primitive extends to any evidence-rich, high-stakes commitment below
+            without diluting that focus.
           </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {useCases.map((uc) => (

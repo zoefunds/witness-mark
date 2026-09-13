@@ -1,19 +1,38 @@
 # WitnessMark
 
-**Make promises that survive contact with reality.**
+**Non-custodial procurement and delivery assurance, settled by evidence, not by an operator.**
 
-WitnessMark is a protocol for financially binding real-world promises to
-observable outcomes. A creator stakes GEN behind a structured, measurable
-promise naming a counterparty. Once the outcome is known, the
-counterparty submits evidence — URLs, images, documents — that a
-[GenLayer](https://genlayer.com) Intelligent Contract fetches and judges
-itself, through independent leader/validator consensus, reaching
-FULFILLED / PARTIALLY_FULFILLED / BROKEN and paying the stake out
-accordingly. No centralized arbiter, no chargeback — the verdict is
-reached by validators independently re-deriving the same judgment from
-the same evidence, exactly the kind of subjective-but-evidence-grounded
-adjudication a normal deterministic smart contract cannot do and a
-centralized backend cannot do neutrally.
+A seller stakes GEN behind a specific, measurable delivery or compliance
+commitment — quantity, quality, specification, deadline — naming the
+buyer as beneficiary. Once the delivery window closes, the buyer submits
+evidence. A single [GenLayer](https://genlayer.com) Intelligent Contract
+fetches that evidence itself and reaches a verdict — FULFILLED,
+PARTIALLY_FULFILLED, or BROKEN — through independent leader/validator
+re-adjudication, then pays the stake out accordingly: back to the seller
+if the terms were met, to the buyer if they weren't, split if partial.
+
+**Why this can't be a centralized API.** In procurement, the seller
+who's paid on "fulfilled," the buyer who's paid on "broken," and any
+platform sitting between them all have directly conflicting incentives
+over the one judgment call that decides where real money goes. A
+deterministic smart contract can't make that call at all — "did this
+shipment match the sample" is not a computation, it's a judgment against
+fetched real-world evidence. GenLayer is the only piece of this system
+that can decide it: validators independently re-fetch the same evidence
+and independently re-derive the same verdict, so no single operator —
+not the seller, not the buyer, not WitnessMark itself — is ever the one
+deciding whose money it is. Adjudication only ever runs once evidence is
+submitted against a stake that's actually locked — never for a casual
+"what do you think" query — so the cost and latency of consensus is
+spent exactly where it's earning something no cheaper mechanism can
+provide.
+
+The same underlying promise primitive generalizes to any evidence-rich,
+high-stakes commitment (freelance milestones, service-level guarantees,
+personal accountability) — see [Use cases](#use-cases) — but procurement
+and delivery assurance is the use case this system is built and
+documented around, because it has the clearest measurable criteria, the
+most obviously conflicting incentives, and the highest real stakes.
 
 ## Live
 
@@ -47,8 +66,12 @@ Each component has its own README with full setup detail:
 PROMISE  →  STAKE  →  EVIDENCE  →  ADJUDICATION  →  SETTLEMENT
 ```
 
-1. **Promise** — a creator writes exact, measurable conditions naming a counterparty.
-2. **Stake** — the creator locks GEN behind it (`create_promise`, payable).
+1. **Promise** — a seller writes exact, measurable acceptance criteria
+   (e.g. "500 units matching sample lot #4021, shipped by the 15th,
+   accompanied by a valid certificate of conformance") naming the buyer
+   as beneficiary, with a due/event window and stated evidence
+   requirements.
+2. **Stake** — the seller locks GEN behind it (`create_promise`, payable) — real capital, not a purchase order.
 3. **Evidence** — once the outcome is known, the counterparty submits
    evidence URLs (`submit_evidence`) — a web-fetchable page, image, or
    document, within a deadline the contract itself enforces.
@@ -62,12 +85,31 @@ PROMISE  →  STAKE  →  EVIDENCE  →  ADJUDICATION  →  SETTLEMENT
 Every timeout has a recovery exit (never-accepted, no-evidence,
 adjudication-never-converged) so funds can never be permanently stuck.
 
+## Use cases
+
+**Procurement / delivery assurance** is the primary, documented use
+case — see `docs/live-product-tests.md`'s Scenario 2 for a real
+end-to-end run (a 1000 GEN shipment-conformance promise, evidence
+sourced from two independent domains per the contract's own high-value
+evidence rule).
+
+The same promise primitive is intentionally general enough to extend to
+other evidence-rich, high-stakes commitments without diluting the
+primary use case — the acceptance-criteria/evidence-window/beneficiary
+structure is identical either way:
+
+- **Freelance & creator milestones** — a client stakes payment behind a scoped deliverable.
+- **Verifiable AI-agent work delivery** — an agent operator stakes completion terms behind a scoped, evidence-checkable task.
+- **Service-level guarantees** — a vendor stakes GEN behind an uptime/response-time commitment.
+- **Personal accountability** — a stake behind a commitment to a named counterparty who benefits if you don't follow through.
+
 ## Documentation
 
 | Doc | Covers |
 |---|---|
 | [`docs/contract.md`](docs/contract.md) | State machine, financial flow, consensus/equivalence design |
-| [`docs/architecture.md`](docs/architecture.md) | System architecture, source-of-truth split |
+| [`docs/architecture.md`](docs/architecture.md) | System architecture, source-of-truth split, diagram of what the backend can/cannot do |
+| [`docs/deployment-manifest.md`](docs/deployment-manifest.md) | Proof the deployed contract matches source: hash, method inventory, known drift if any |
 | [`docs/security.md`](docs/security.md) | Threat model, known gaps |
 | [`docs/testing.md`](docs/testing.md) | How to run every test suite, live-verified results |
 | [`docs/live-product-tests.md`](docs/live-product-tests.md) | 4 real product scenarios run against the live contract, with real tx hashes |

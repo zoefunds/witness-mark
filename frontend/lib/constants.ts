@@ -136,10 +136,13 @@ export const STATUS_TONE_CLASSES: Record<string, string> = {
   error: "bg-error-container text-on-error-container",
 };
 
+// "procurement" listed first: the primary, documented use case (see
+// README.md and docs/live-product-tests.md's Scenario 2) — also the
+// default selected in the create-promise wizard.
 export const CATEGORY_OPTIONS = [
+  "procurement",
   "goods",
   "services",
-  "procurement",
   "creative",
   "employment",
   "logistics",

@@ -49,7 +49,7 @@ export default function CreatePromisePage() {
     statement: "",
     conditions: "",
     counterparty: "",
-    category: "goods",
+    category: "procurement",
     evidenceRequirements: "",
     stakeGen: "",
     acceptWindowSeconds: 259200,
