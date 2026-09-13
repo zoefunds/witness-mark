@@ -127,17 +127,25 @@ async function connectInjectedWallet(page: Page): Promise<string> {
   return address;
 }
 
-async function waitForTxConfirmedAndGetHash(page: Page): Promise<string> {
-  await expect(page.getByText("Transaction confirmed.")).toBeVisible({ timeout: 120_000 });
+async function waitForTxConfirmedAndGetHash(page: Page, timeout = 120_000): Promise<string> {
+  await expect(page.getByText("Transaction confirmed.")).toBeVisible({ timeout });
   const hashLocator = page.locator("span.font-mono-data", { hasText: /^0x[0-9a-fA-F]+$/ });
   const hash = await hashLocator.first().textContent();
   return hash?.trim() ?? "";
 }
 
+// Nondeterministic writes (resolve_promise's adjudication, contest_verdict,
+// resolve_contest) go through real leader+validator LLM consensus on
+// StudioNet, which can genuinely take several minutes -- longer than the
+// simple deterministic writes above. Found by this exact test: the first
+// real run against the redeployed app confirmed create/accept/submit in
+// well under 120s each, then resolve_promise alone exceeded it.
+const NONDET_TX_TIMEOUT = 480_000;
+
 const txLog: Record<string, string> = {};
 
 test.describe("signed StudioNet lifecycle (real injected test wallets, no mocks)", () => {
-  test.setTimeout(15 * 60_000);
+  test.setTimeout(25 * 60_000);
 
   test("create -> accept -> authenticated evidence upload -> submit -> resolve -> contest/resolve_contest", async ({
     browser,
@@ -224,7 +232,7 @@ test.describe("signed StudioNet lifecycle (real injected test wallets, no mocks)
     // ---- resolve_promise (real nondet adjudication) -----------------------
     await creatorPage.goto(`/promises/${promiseId}`);
     await creatorPage.getByRole("button", { name: "Run adjudication" }).click();
-    txLog.resolve_promise = await waitForTxConfirmedAndGetHash(creatorPage);
+    txLog.resolve_promise = await waitForTxConfirmedAndGetHash(creatorPage, NONDET_TX_TIMEOUT);
     console.log(`resolve_promise tx: ${txLog.resolve_promise}`);
 
     await creatorPage.reload();
@@ -243,12 +251,12 @@ test.describe("signed StudioNet lifecycle (real injected test wallets, no mocks)
       );
     } else {
       await contestButton.click();
-      txLog.contest_verdict = await waitForTxConfirmedAndGetHash(creatorPage);
+      txLog.contest_verdict = await waitForTxConfirmedAndGetHash(creatorPage, NONDET_TX_TIMEOUT);
       console.log(`contest_verdict tx: ${txLog.contest_verdict}`);
 
       await counterpartyPage.goto(`/promises/${promiseId}`);
       await counterpartyPage.getByRole("button", { name: "Resolve contest" }).click();
-      txLog.resolve_contest = await waitForTxConfirmedAndGetHash(counterpartyPage);
+      txLog.resolve_contest = await waitForTxConfirmedAndGetHash(counterpartyPage, NONDET_TX_TIMEOUT);
       console.log(`resolve_contest tx: ${txLog.resolve_contest}`);
     }
 

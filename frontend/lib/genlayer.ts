@@ -151,6 +151,23 @@ export interface WriteResult {
 // frontend/e2e/signed-lifecycle.spec.ts's real signed E2E test: "Promise
 // created" rendered with no tx hash and no promise id ever shown, on the
 // very first live run against a real wallet.
+//
+// genlayer-js's own default retry budget for waitForTransactionReceipt is
+// tiny -- 10 retries * 3s interval = 30s (see its src/config/transactions.ts)
+// -- fine for a deterministic write, nowhere near enough for one that goes
+// through real leader+validator LLM consensus (resolve_promise,
+// contest_verdict, resolve_contest, finalize_promise all trigger
+// adjudication). Also found via the same E2E test: after fixing the bug
+// above, resolve_promise's write started genuinely timing out client-side
+// ("Timed out waiting for transaction ... current status: 3") well before
+// the real transaction had actually failed on-chain -- gltest's own CLI
+// defaults to 50 retries for exactly this reason (see gltest.config.yaml /
+// its startup log). NONDET_RETRIES gives nondeterministic writes the same
+// order-of-magnitude budget the test suite already relies on.
+const DEFAULT_RETRIES = 40; // ~2 minutes, generous margin for deterministic writes
+const NONDET_RETRIES = 150; // ~7.5 minutes, for writes that trigger real adjudication
+const WAIT_INTERVAL_MS = 3000;
+
 async function writeAndWait(
   client: ReturnType<typeof getGenlayerClient>,
   args: {
@@ -160,11 +177,14 @@ async function writeAndWait(
     args: unknown[];
     value: bigint;
   },
+  retries: number = DEFAULT_RETRIES,
 ): Promise<WriteResult> {
   const hash = await client.writeContract(args as never);
   const receipt = await client.waitForTransactionReceipt({
     hash: hash as never,
     status: TransactionStatus.ACCEPTED,
+    interval: WAIT_INTERVAL_MS,
+    retries,
   } as never);
   return { hash: String(hash), receipt };
 }
@@ -253,7 +273,7 @@ export async function resolvePromise({ provider, account }: WriteArgs, promiseId
     functionName: "resolve_promise",
     args: [promiseId],
     value: 0n,
-  });
+  }, NONDET_RETRIES);
 }
 
 export async function finalizePromise({ provider, account }: WriteArgs, promiseId: number) {
@@ -265,7 +285,7 @@ export async function finalizePromise({ provider, account }: WriteArgs, promiseI
     functionName: "finalize_promise",
     args: [promiseId],
     value: 0n,
-  });
+  }, NONDET_RETRIES);
 }
 
 export async function contestVerdict({ provider, account }: WriteArgs, promiseId: number, bondWei: bigint) {
@@ -277,7 +297,7 @@ export async function contestVerdict({ provider, account }: WriteArgs, promiseId
     functionName: "contest_verdict",
     args: [promiseId],
     value: bondWei,
-  });
+  }, NONDET_RETRIES);
 }
 
 export async function resolveContest({ provider, account }: WriteArgs, promiseId: number) {
@@ -289,7 +309,7 @@ export async function resolveContest({ provider, account }: WriteArgs, promiseId
     functionName: "resolve_contest",
     args: [promiseId],
     value: 0n,
-  });
+  }, NONDET_RETRIES);
 }
 
 export async function timeoutUnacceptedReclaim({ provider, account }: WriteArgs, promiseId: number) {

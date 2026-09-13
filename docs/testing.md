@@ -388,21 +388,40 @@ through this exact frontend code path:**
    created promise's id from `get_promise_count() - 1` after the write
    confirms, rather than guessing at the receipt's shape.
 
-Fix #1 has been redeployed to production. Fix #2 is applied and passes
-`tsc --noEmit`, `npm run lint`, and `npm run build`, but had not yet been
-redeployed or re-verified end-to-end via this test as of this writing —
-see `MEMORY.md`/the latest session notes for current status.
+A third bug surfaced re-verifying fix #2: genlayer-js's own default
+`waitForTransactionReceipt` retry budget is 10 retries * 3s = 30 seconds
+(see its `src/config/transactions.ts`) — fine for a simple deterministic
+write, nowhere near enough for `resolve_promise`, `contest_verdict`,
+`resolve_contest`, or `finalize_promise`, all of which trigger real
+leader+validator LLM adjudication that can take minutes. Confirmed live:
+after redeploying fix #2, `resolve_promise`'s write correctly sent and
+was correctly accepted on-chain, but the UI reported "Transaction
+failed... Timed out waiting..." because its own client-side polling gave
+up first. Fixed by passing an explicit, much larger retry budget
+(~7.5 minutes, the same order of magnitude `gltest`'s own CLI already
+uses) for these four nondeterministic writes specifically, leaving the
+simple writes at a smaller-but-still-generous budget.
 
-**What this leaves genuinely uncovered until the next successful full
-run**: end-to-end proof that the browser UI drives the complete signed
-lifecycle correctly. Every individual contract operation in that journey
-IS independently verified live against StudioNet already, just via
-`gltest` (see above) and the direct genlayer-js product-test battery
-(`docs/live-product-tests.md`) rather than a browser click-through — so
-what remains open is narrower than "nothing is tested live": specifically
-whether the UI's own request-building and receipt-handling code (as
-opposed to the contract itself) is correct, which is exactly the class of
-bug this test already found twice.
+**Verified live against production, 2026-09-13, all three fixes
+deployed**: the full connect → create → accept → authenticated evidence
+upload → submit → resolve journey **passed end-to-end** through the real
+UI with two real injected wallets, no mocks — `create_promise`,
+`accept_promise`, `submit_evidence`, and `resolve_promise` all confirmed
+with real on-chain tx hashes. This run's adjudication landed on
+`UNDETERMINED` rather than a recorded verdict, so the test gracefully
+logged and skipped the contest/`resolve_contest` branch — the same
+legitimate LLM-sampling outcome already documented above for
+`test_contest_round_reaches_a_terminal_state`, not a failure. Re-run
+(`npx playwright test signed-lifecycle`) to land past it and exercise
+that branch too.
+
+**What this leaves genuinely uncovered**: the contest/`resolve_contest`
+leg specifically, through the browser UI, pending a run whose
+adjudication happens to land on a recorded verdict rather than
+`UNDETERMINED` — that leg IS independently verified live via `gltest`
+and the direct genlayer-js product-test battery
+(`docs/live-product-tests.md`) already, just not yet through this exact
+browser click-through.
 
 ## CI
 
