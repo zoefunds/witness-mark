@@ -41,6 +41,40 @@
   access. Worst case is stale/incorrect cached reads or leaked evidence
   metadata, not fund loss.
 
+## Operational note: StudioNet balance-read lag (not a contract defect)
+
+Found while adding `test_escrow_conservation_across_cancel` to the
+`gltest` suite (2026-09-13): StudioNet's balance RPC (`getBalance`) can
+lag up to ~20-30 seconds behind a transaction's own "ACCEPTED" status —
+even with `wait_triggered_transactions=True` on the triggering call,
+which correctly waits for the child transfer transaction itself to
+settle. A balance read taken immediately after a payout transaction can
+therefore appear stale for up to that long. Confirmed by direct
+measurement (polling every 10s: stale at t+10s and t+20s, correct at
+t+30s) that this is read-side eventual consistency on the RPC, not a
+failed or delayed transfer — the exact same on-chain `emit_transfer` call
+this project's own live product-test recipients already show real,
+non-zero balances from (see `docs/live-product-tests.md`). Anything
+reading a balance shortly after a WitnessMark transaction (a monitoring
+dashboard, a test, a support script) should poll/retry rather than treat
+an immediately-stale read as a failure — see `_poll_until` in
+`tests/integration/test_witnessmark_lifecycle.py` for the pattern used
+here.
+
+This lag also has a second-order testing implication, also found and
+fixed the same day: this test file's fixtures reuse the same handful of
+`accounts[]` as creator/counterparty across nearly every test (by
+design, to keep the fast suite fast). Combined with the lag above, a
+balance-conservation test using a shared account can observe a DIFFERENT
+test's delayed refund landing mid-test and mistake it for a conservation
+violation — this happened for real while adding
+`test_escrow_conservation_across_cancel` (observed a 5 GEN delta where 3
+GEN was expected: the extra 2 GEN was `test_cancel_before_acceptance_
+refunds_creator`'s refund to the same shared account, landing late). The
+fix is generating a dedicated fresh account (`create_account()`) for any
+test that asserts on absolute balance deltas, rather than a shared
+fixture account — already applied in that test.
+
 ## Known gaps / follow-ups before handling large real value
 
 - **No formal third-party contract audit performed** beyond `genvm-lint` +

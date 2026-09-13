@@ -62,8 +62,9 @@ import json
 import time
 
 import pytest
-from gltest import get_contract_factory, get_accounts
+from gltest import get_contract_factory, get_accounts, create_account
 from gltest.assertions import tx_execution_succeeded
+from gltest.clients import get_gl_client
 
 
 GEN = 10**18  # GEN has 18 decimals, same as ETH
@@ -172,14 +173,103 @@ def test_cancel_before_acceptance_refunds_creator(contract, accounts):
         args=[counterparty.address, "T", "s", "c", "r", "goods", 600, 600]
     ).transact(value=2 * GEN)
 
-    balance_before = creator.w3.eth.get_balance(creator.address) if hasattr(creator, "w3") else None
-
     receipt = contract.cancel_promise(args=[0]).transact()
     assert tx_execution_succeeded(receipt)
 
     p = get_promise(contract, 0)
     assert p["status"] == "CANCELLED"
     assert p["stake_deposited_wei"] == 0
+
+
+def _poll_until(fn, predicate, attempts=12, interval_seconds=5):
+    """StudioNet's balance RPC is eventually consistent relative to
+    transaction "ACCEPTED" status -- observed empirically to lag by up to
+    ~20-30s even with wait_triggered_transactions=True on the triggering
+    call. This polls rather than either sleeping a single fixed (and
+    possibly still too short) duration, or asserting immediately and
+    mistaking normal read-lag for a payout failure."""
+    value = fn()
+    for _ in range(attempts):
+        if predicate(value):
+            return value
+        time.sleep(interval_seconds)
+        value = fn()
+    return value
+
+
+def test_escrow_conservation_across_cancel(contract, accounts):
+    """Exact conservation check, not just a status-field assertion: the
+    creator's on-chain balance actually goes up by exactly the refunded
+    stake amount, and the contract's own balance actually goes down by
+    exactly the stake -- money isn't just marked "returned" in storage
+    while silently staying put or going missing. StudioNet is gasless,
+    so there is no gas fee to account for in the delta.
+
+    Empirically found while writing this test: StudioNet's balance RPC
+    lags real transaction finality by up to ~20-30s (confirmed via manual
+    polling -- balances read immediately after a wait_triggered_
+    transactions=True receipt were stale for two full 10s ticks, then
+    became correct on the third). That is read-side eventual consistency
+    on a test network, not a contract defect -- see _poll_until above and
+    docs/security.md's note on this.
+
+    Uses a FRESHLY GENERATED creator account (create_account()), not
+    accounts[0] -- accounts[0]/accounts[1] are reused as creator/
+    counterparty by nearly every other test in this file, and combined
+    with the RPC lag above, a shared account's balance can pick up a
+    DIFFERENT test's delayed refund mid-test (this was caught for real:
+    an earlier version of this test using accounts[0] intermittently
+    observed a 5 GEN delta instead of the expected 3 GEN -- exactly the
+    3 GEN this test refunds plus a 2 GEN refund from
+    test_cancel_before_acceptance_refunds_creator, which also uses
+    accounts[0], landing late). A dedicated fresh account has no history
+    for another test to contaminate."""
+    creator = create_account()
+    counterparty = accounts[1]
+    client = get_gl_client()
+    stake = 3 * GEN
+
+    creator_balance_before = client.get_balance(creator.address)
+    contract_balance_before = client.get_balance(contract.address)
+
+    contract.account = creator
+    contract.create_promise(
+        args=[counterparty.address, "T", "s", "c", "r", "goods", 600, 600]
+    ).transact(value=stake)
+
+    contract_balance_after_create = _poll_until(
+        lambda: client.get_balance(contract.address),
+        lambda v: v == contract_balance_before + stake,
+    )
+    assert contract_balance_after_create == contract_balance_before + stake, (
+        "the contract's balance must increase by exactly the staked amount on create_promise"
+    )
+
+    # The actual GEN transfer inside cancel_promise happens via
+    # _send_gen's emit_transfer call, which GenVM executes as a separate
+    # "triggered transaction" that can settle strictly after the parent
+    # transaction's own receipt is already ACCEPTED.
+    # wait_triggered_transactions=True blocks until that child transfer
+    # has ALSO reached the target status -- necessary but, empirically,
+    # not always sufficient for the balance RPC to reflect it immediately
+    # (see _poll_until above).
+    receipt = contract.cancel_promise(args=[0]).transact(wait_triggered_transactions=True)
+    assert tx_execution_succeeded(receipt)
+
+    contract_balance_after_cancel = _poll_until(
+        lambda: client.get_balance(contract.address),
+        lambda v: v == contract_balance_before,
+    )
+    creator_balance_after = client.get_balance(creator.address)
+
+    assert contract_balance_after_cancel == contract_balance_before, (
+        "the contract must hold exactly zero of this promise's stake after a full refund -- "
+        "no stranded balance left behind"
+    )
+    assert creator_balance_after == creator_balance_before + stake, (
+        "a full refund must increase the creator's balance by exactly the staked amount -- "
+        "any other delta would mean value was created, destroyed, or partially stranded"
+    )
 
 
 def test_cancel_only_by_creator(contract, accounts):
