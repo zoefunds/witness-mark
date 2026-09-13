@@ -102,21 +102,29 @@ with reality."
   empty — fill in once generated / once the user deploys the contract.
 
 ## Deployed contract
-- **Current address: `0x8646e58436bb191680B28b9b85b799C856CfCA64`**
-  (StudioNet). Fourth deployment, superseding the address below. Wired
-  into the Fly secret and Vercel env var on 2026-08-27, both
-  redeployed and confirmed live. Database confirmed already clean (all
-  tables — `promise_index`, `evidence_files`, `audit_log`, `users`,
-  `auth_nonces` — were 0 rows; no prior-contract data existed to clear).
-  **Live product-test battery run against this address**: 4 real
-  scenarios, 14/14 write transactions ACCEPTED, zero failures — see
-  `docs/live-product-tests.md` for full detail with real tx hashes, and
-  `backend/scripts/run-product-tests.cjs` / `product-test-report.json`
-  for the runnable script and raw output. One incidental promise (id 0,
-  "Validation ping") also exists from a pre-flight pipeline check before
-  the 4 real scenarios — it's a harmless, successfully-created CREATED-
-  status promise, left as-is since its creator's ephemeral key wasn't
-  retained to cancel it, and it caused no error.
+- **Current address: `0x181eeE5ff3B1186b39f813129d57558Ad61Ff39B`**
+  (StudioNet). Fifth deployment. Wired into the Fly secret and Vercel env
+  var on 2026-09-13, both redeployed and confirmed live (`/healthz`,
+  `/readyz`, `/api/stats` all green; fresh instance, 0 promises as
+  expected). **`node backend/scripts/verify-deployment.mjs` reports a
+  clean PASS against this address** — byte-identical source hash AND
+  full method/config match, including the 3 `get_config()` fields
+  (`evidence_late_grace_seconds`, `high_value_stake_threshold_wei`,
+  `min_evidence_items_high_value`) that were missing on the prior
+  deployment. See `docs/deployment-manifest.md` for the full record.
+  Note: `docs/live-product-tests.md`'s 4-scenario battery was run against
+  the PRIOR address (`0x8646e58436bb191680B28b9b85b799C856CfCA64`) — this
+  fresh instance has no on-chain history of its own yet.
+- **Prior address (superseded): `0x8646e58436bb191680B28b9b85b799C856CfCA64`**
+  (StudioNet). Fourth deployment. Database was confirmed already clean
+  before this address went live (all tables 0 rows). Live product-test
+  battery run against this address: 4 real scenarios, 14/14 write
+  transactions ACCEPTED, zero failures — see `docs/live-product-tests.md`
+  for full detail with real tx hashes, and `backend/scripts/
+  run-product-tests.cjs` / `product-test-report.json` for the runnable
+  script and raw output. Its `get_config()` was missing the 3 fields
+  above (closed by the redeploy above) — see `docs/deployment-manifest.md`
+  for the exact drift that was found and how.
 - **Prior address (superseded): `0x0f0f8AF4482880756469Ba02964Aef221C91613e`**
   (StudioNet). This is the SECOND deployment — the user redeployed after
   the round-2 review fixes (evidence deadline enforcement, evidence
@@ -135,13 +143,11 @@ with reality."
   deploys the contract). `GENLAYER_RPC_URL` left empty deliberately —
   genlayer-js ships a built-in studionet chain config; only set an
   explicit RPC URL if that stops being sufficient.
-- **Note:** the deployed contract's `get_config()` does NOT yet include
-  `evidence_late_grace_seconds` / `high_value_stake_threshold_wei` /
-  `min_evidence_items_high_value` — those three keys were added to
-  `get_config()`'s return dict in source *after* this second deployment
-  (a transparency nice-to-have, not a behavior change — the underlying
-  rules were already enforced either way). Harmless to leave as-is; pick
-  it up on the next redeploy if one happens for another reason.
+- **Resolved as of the fifth deployment above**: `get_config()` now
+  exposes `evidence_late_grace_seconds` / `high_value_stake_threshold_wei`
+  / `min_evidence_items_high_value` on the live instance — this was a
+  known, documented, behavior-neutral gap on the two prior deployments,
+  closed by the 2026-09-13 redeploy.
 
 ## Backend deployment (live)
 - Fly app: **witnessmark-api** (org "personal"), region `iad`.

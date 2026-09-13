@@ -23,65 +23,45 @@ discovered later by a user hitting a missing method or field.
 |---|---|
 | Contract | `WitnessMark` (single Intelligent Contract — no helper contracts, tokens, factories, registries, or proxies exist anywhere in this system) |
 | Chain | GenLayer StudioNet, chain id `61999` |
-| Address | `0x8646e58436bb191680B28b9b85b799C856CfCA64` |
+| Address | `0x181eeE5ff3B1186b39f813129d57558Ad61Ff39B` |
 | Deployed by | The project owner directly via `genlayer deploy` (never by an automated agent — see `docs/deployment.md`) |
 | Deployment transaction | Not captured at deploy time (deployed outside of any tooling that records it). Retrievable via the [GenLayer Explorer](https://genlayer-explorer.vercel.app) by searching the address, or via `genlayer receipt <txId>` if the tx hash is later located. |
-| Source git commit at last verification | `e4a58768a219994bbe977c722cb27406eb111cf9` |
+| Source git commit at last verification | `ce20a278b8627de7f739e7bce7e21a81b0600713` |
 | Runner dependency pin | `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6` (see the `# { "Depends": ... }` header of `contracts/witnessmark_contract.py`) |
 
-## Verification status — KNOWN DRIFT, documented not hidden
+## Verification status — clean
 
 As of 2026-09-13, running `node backend/scripts/verify-deployment.mjs`
 against the address above reports:
 
 ```
 Local source sha256:    26e6b058e71326aa95e45d20f53b1ee1858dae13f424a5835c455826ca940dc5
-Deployed source sha256: fe2a33c9dfaaf293270e78ac2862259f5c55401d17639c640bee3d98ad06f3ac
-Source match: NO
+Deployed source sha256: 26e6b058e71326aa95e45d20f53b1ee1858dae13f424a5835c455826ca940dc5
+Source match: YES -- byte-identical
 Local source methods:    11 write, 8 view
-Deployed schema methods: 11 write, 8 view   <- method inventory is IDENTICAL
-Length: deployed 77722 bytes vs local 77949 bytes (+227)
+Deployed schema methods: 11 write, 8 view
+
+PASS: source/deployment match for 0x181eeE5ff3B1186b39f813129d57558Ad61Ff39B
 ```
 
-**The full public method inventory (11 write, 8 view) is identical
-between source and deployment** — every method a client can call exists
-on-chain with the exact same name, parameters, and payability the source
-defines. The only difference is 3 extra keys in `get_config()`'s return
-dictionary that exist in source but not on the deployed instance:
+The deployed contract is now byte-identical to
+`contracts/witnessmark_contract.py` at the commit above — both the full
+method inventory and every constant/config value match exactly,
+including `get_config()`'s `evidence_late_grace_seconds`,
+`high_value_stake_threshold_wei`, and `min_evidence_items_high_value`,
+which were the fields missing on the previous deployment (see the
+superseded-deployment history below).
 
-```python
-"evidence_late_grace_seconds": EVIDENCE_LATE_GRACE_SECONDS,
-"high_value_stake_threshold_wei": HIGH_VALUE_STAKE_THRESHOLD_WEI,
-"min_evidence_items_high_value": MIN_EVIDENCE_ITEMS_HIGH_VALUE,
-```
+## Superseded deployments
 
-These were added to source as a read-only transparency improvement
-(surfacing constants that were already being enforced internally by
-`submit_evidence`) after the address above was deployed. They:
-
-- **Do not change any enforcement behavior** — `EVIDENCE_LATE_GRACE_SECONDS`,
-  `HIGH_VALUE_STAKE_THRESHOLD_WEI`, and `MIN_EVIDENCE_ITEMS_HIGH_VALUE`
-  were already being enforced by the deployed instance's `submit_evidence`
-  before this addition; `get_config()` simply didn't expose their values
-  for a client to read ahead of time.
-- **Do not add, remove, or change any write method's behavior, parameters, or access control.**
-- Are read via `frontend/lib/types.ts`'s `ProtocolConfig`, which already
-  marks these three fields optional specifically because of this known
-  gap (`evidence_late_grace_seconds?: number`, etc.) — the frontend
-  degrades to a hardcoded fallback constant matching the contract's own
-  value when they're absent (see `frontend/lib/actions.ts`'s
-  `evidenceLateGraceSeconds()`), so this drift causes no incorrect
-  behavior in the live app today.
-
-**This is a redeploy decision, not an emergency fix** — closing it
-requires the project owner running `genlayer deploy` again (per this
-project's standing policy that only the owner deploys, never an
-automated agent) and updating the address everywhere per
-`docs/deployment.md`. Until that happens, `verify-deployment.mjs` and
-the CI job wired to it will correctly and intentionally report `FAIL`
-for the byte-hash comparison — that is the check working as designed,
-not a broken pipeline. The next redeploy should re-run this manifest's
-generation and update the git commit / hash values above.
+- `0x8646e58436bb191680B28b9b85b799C856CfCA64` — the prior deployment.
+  Its `get_config()` was missing the 3 fields above (a read-only
+  transparency gap, not a behavior difference — those constants were
+  already being enforced internally by `submit_evidence` on that
+  instance too). Closed by the redeploy above.
+- Earlier addresses: `0x0f0f8AF4482880756469Ba02964Aef221C91613e`,
+  `0xEb85C80af65d4dF2AD4E796320cDF95Cfac6927F` — see `MEMORY.md` for
+  the full history of what each round of fixes corresponded to.
 
 ## Full method inventory (from live `getContractSchema`)
 
@@ -104,9 +84,14 @@ see `contracts/witnessmark_contract.py`'s `WitnessMark` class docstring.
 
 | Location | Variable | Value |
 |---|---|---|
-| `backend/.env` (Fly secret) | `GENLAYER_CONTRACT_ADDRESS` | `0x8646e58436bb191680B28b9b85b799C856CfCA64` |
-| `frontend/.env.local` (Vercel env var) | `NEXT_PUBLIC_CONTRACT_ADDRESS` | `0x8646e58436bb191680B28b9b85b799C856CfCA64` |
+| `backend/.env` (Fly secret) | `GENLAYER_CONTRACT_ADDRESS` | `0x181eeE5ff3B1186b39f813129d57558Ad61Ff39B` |
+| `frontend/.env.local` (Vercel env var) | `NEXT_PUBLIC_CONTRACT_ADDRESS` | `0x181eeE5ff3B1186b39f813129d57558Ad61Ff39B` |
 
-Both confirmed live and reading from this address (see
-`docs/live-product-tests.md` for a full real-transaction battery run
-against it).
+Both confirmed live and reading from this address (`/healthz`, `/readyz`,
+and `/api/stats` all verified post-deploy; the site returns 200).
+
+Note: this is a freshly-deployed instance, so `docs/live-product-tests.md`
+and any dashboard/reputation data from prior scenarios reflect the
+PREVIOUS address's history, not this one. Re-run the product-test battery
+against this address if fresh on-chain evidence is needed for this
+specific deployment.
