@@ -1,0 +1,37 @@
+name: Long-timeout recovery tests (shortened test build)
+
+# Exercises the multi-day timeout/recovery paths (timeout_no_evidence_
+# reclaim, force_refund_undetermined, finalize_promise) end-to-end for
+# real, against a generated TEST-ONLY contract build with exactly three
+# duration constants shortened from days/hours to 45 seconds -- see
+# scripts/generate_shortened_test_contract.py and
+# tests/integration/test_long_timeout_recovery.py for the full detail on
+# why this exists and what it does/doesn't prove about production, which
+# is deployed from contracts/witnessmark_contract.py unmodified and never
+# from the generated file this workflow builds.
+#
+# Runs on a schedule rather than on every push -- each run spends several
+# real minutes sleeping out shortened windows, and there's no reason to
+# pay that cost on every commit when the contract's core logic (not these
+# specific durations) is what changes day to day.
+on:
+  schedule:
+    - cron: "17 6 * * 1" # weekly, Monday 06:17 UTC
+  workflow_dispatch: {}
+
+jobs:
+  long-timeout-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install genlayer-test genvm-linter
+      - run: python3 scripts/generate_shortened_test_contract.py > _test_builds/long_timeout/witnessmark_contract.py
+      - run: genvm-lint check _test_builds/long_timeout/witnessmark_contract.py --json
+      - run: |
+          gltest --contracts-dir _test_builds/long_timeout \
+                 --artifacts-dir artifacts_long_timeout \
+                 tests/integration/test_long_timeout_recovery.py -v -s

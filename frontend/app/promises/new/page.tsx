@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { useWallet } from "@/hooks/useWallet";
 import { useContractTx } from "@/hooks/useContractTx";
-import { createPromise } from "@/lib/genlayer";
+import { createPromise, readPromiseCount } from "@/lib/genlayer";
 import { Button, Card, EmptyState, Field, inputClasses } from "@/components/ui";
 import { TxStatus } from "@/components/TxStatus";
 import { CATEGORY_OPTIONS } from "@/lib/constants";
@@ -85,12 +85,14 @@ export default function CreatePromisePage() {
         stakeWei: genToWei(form.stakeGen),
       }),
     );
-    if (result !== null && typeof result === "number") {
-      setCreatedId(result);
-    } else if (result !== null) {
-      // some clients return a receipt/dict rather than a raw int; best effort
-      const maybeId = (result as { return_value?: number })?.return_value;
-      if (typeof maybeId === "number") setCreatedId(maybeId);
+    if (result !== null) {
+      // create_promise's own receipt doesn't carry the new promise id in a
+      // form worth parsing -- the contract assigns ids sequentially, so
+      // re-reading the count right after our own now-consensus-confirmed
+      // write is the same pattern backend/scripts/run-product-tests.cjs
+      // uses against this same contract.
+      const count = await readPromiseCount();
+      setCreatedId(count - 1);
     }
   }
 

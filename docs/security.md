@@ -89,12 +89,20 @@ fixture account — already applied in that test.
   adversarial prompt-injection resistance (verified working) and an
   empirical verdict-convergence sample, both run for real against
   StudioNet; backend (vitest+supertest) and frontend (vitest) unit suites
-  exist and pass. **Still open**: a full contest-round settlement
+  exist and pass. A larger-N convergence study now also exists across
+  BROKEN-leaning and compound-condition evidence types (n=5 each, see
+  `docs/testing.md`), extending the original n=3 single-fixture sample.
+  A signed, real-wallet browser E2E of the full lifecycle also now
+  exists and has already found and fixed two real frontend bugs (a
+  broken chain-config object and missing transaction-receipt waiting on
+  every write) — see `docs/testing.md`'s "Signed E2E" section for current
+  status. **Still open**: a full contest-round settlement
   (`resolve_contest` payout leg) has not yet completed in a live test run
   — see `docs/testing.md`'s live-run history for exactly why (legitimate
   LLM non-convergence and one transient network error, not a contract
-  bug) — and a larger-N statistical convergence study beyond the current
-  n=3 sample.
+  bug) — and a "changed evidence" convergence sweep (evidence that shifts
+  between resolve attempts), which needs a controlled mutable evidence
+  server not built in this pass.
 - **A real client/contract mismatch was found and fixed** (external
   review, 2026-08-27): the frontend was offering the "reclaim stake — no
   evidence" action, and computing the required contest bond, from

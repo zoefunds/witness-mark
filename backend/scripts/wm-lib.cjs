@@ -2,7 +2,7 @@ const { createClient, createAccount, generatePrivateKey } = require("genlayer-js
 const { studionet } = require("genlayer-js/chains");
 const { TransactionStatus, ExecutionResult } = require("genlayer-js/types");
 
-const CONTRACT_ADDRESS = "0x8646e58436bb191680B28b9b85b799C856CfCA64";
+const CONTRACT_ADDRESS = "0x181eeE5ff3B1186b39f813129d57558Ad61Ff39B";
 const GEN = 10n ** 18n;
 
 function newAccount(label) {

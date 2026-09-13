@@ -18,3 +18,5 @@ coverage/
 test-results/
 playwright-report/
 blob-report/
+_test_builds/long_timeout/
+artifacts_long_timeout/

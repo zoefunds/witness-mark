@@ -1,25 +1,29 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 
 /**
- * Real signed-transaction E2E: create -> accept -> submit evidence ->
- * resolve, driven entirely through the live UI against live StudioNet,
- * using an injected EIP-1193 test wallet backed by a REAL viem account
- * (not a mock of the contract or backend -- genuine transactions,
- * genuine tx hashes, printed to the test output).
+ * Real signed-transaction E2E: create -> accept -> authenticated evidence
+ * upload -> submit -> resolve -> contest/resolve_contest, driven entirely
+ * through the live UI against live StudioNet, using two independent
+ * injected EIP-1193 test wallets (one per persona) backed by REAL viem
+ * accounts -- genuine transactions, genuine tx hashes, printed to test
+ * output as they happen.
  *
- * How the injected wallet works: `installTestWallet()` runs a script
- * (via page.addInitScript, so it exists before any app code runs) that
- * defines `window.ethereum` as an EIP-1193 provider. Its `request()`
- * method lazily imports viem from a CDN (only when actually invoked, so
- * there's no race with the app's own startup) and signs/sends using a
- * real local private key. StudioNet is gasless, so a fresh unfunded key
- * works with no setup.
+ * Connection technique: earlier attempts tried to get Reown AppKit's
+ * connector-picker MODAL to list the injected/EIP-6963-announced test
+ * wallet as a selectable option -- confirmed by screenshot that it
+ * doesn't (AppKit shows only its curated remote-wallet list). Rather
+ * than keep fighting AppKit's UI internals, this calls
+ * window.__e2eConnectInjected() (see components/E2EWalletHook.tsx),
+ * which invokes wagmi's own connect() action against the injected()
+ * connector directly -- the same underlying action AppKit's button would
+ * eventually call, just without its UI layer in the way. This is real
+ * wagmi state, a real connected account, and every subsequent write is
+ * still signed by the real injected wallet's personal_sign/
+ * eth_sendTransaction handlers.
  *
- * If this suite is skipped or fails at the "wait for wallet detection"
- * step, that means the injected provider wasn't picked up by wagmi's
- * connector detection in this environment (see the skip/fail message for
- * specifics) -- see docs/testing.md for exactly what that means and
- * doesn't mean.
+ * This test is slow (~5-10 real minutes: two live nondet adjudication
+ * rounds) and consumes real StudioNet request budget -- run it
+ * individually, not as part of routine CI.
  */
 
 const STUDIONET_CHAIN_ID_HEX = "0xf22f"; // 61999
@@ -31,10 +35,9 @@ function randomHexPrivateKey(): string {
   return "0x" + Buffer.from(bytes).toString("hex");
 }
 
-async function installTestWallet(page: Page, privateKey: string) {
-  await page.addInitScript(
+async function installTestWallet(context: BrowserContext, privateKey: string) {
+  await context.addInitScript(
     ({ privateKey, chainIdHex, viemCdn }) => {
-      const state: { address: string | null } = { address: null };
       const listeners: Record<string, Array<(...args: unknown[]) => void>> = {};
 
       async function getAccountAndClient() {
@@ -64,7 +67,6 @@ async function installTestWallet(page: Page, privateKey: string) {
         },
         request: async ({ method, params }: { method: string; params?: unknown[] }) => {
           const { account, client } = await getAccountAndClient();
-          state.address = account.address;
           switch (method) {
             case "eth_requestAccounts":
             case "eth_accounts":
@@ -80,10 +82,11 @@ async function installTestWallet(page: Page, privateKey: string) {
             }
             case "eth_sendTransaction": {
               const tx = (params as Record<string, string>[])[0];
+              console.log("[test-wallet] eth_sendTransaction params:", JSON.stringify(tx));
               return client.sendTransaction({
                 to: tx.to as `0x${string}`,
-                data: tx.data as `0x${string}` | undefined,
-                value: tx.value ? BigInt(tx.value) : undefined,
+                data: (tx.data ?? tx.input) as `0x${string}` | undefined,
+                value: tx.value ? BigInt(tx.value) : 0n,
               });
             }
             default:
@@ -92,15 +95,11 @@ async function installTestWallet(page: Page, privateKey: string) {
         },
       };
 
-      // Legacy window.ethereum injection (what most connector libraries,
-      // including wagmi's injected() connector, still check first).
       Object.defineProperty(window, "ethereum", { value: provider, writable: true, configurable: true });
       window.dispatchEvent(new Event("ethereum#initialized"));
 
-      // EIP-6963 announcement (what newer wallet-detection code -- Reown
-      // AppKit included -- prefers): announce on request AND eagerly.
       const info = {
-        uuid: "witnessmark-test-wallet",
+        uuid: "witnessmark-test-wallet-" + privateKey.slice(2, 10),
         name: "WitnessMark Test Wallet",
         icon: "data:image/svg+xml;base64,",
         rdns: "com.witnessmark.testwallet",
@@ -116,35 +115,144 @@ async function installTestWallet(page: Page, privateKey: string) {
   );
 }
 
-test.describe("signed StudioNet lifecycle (real injected test wallet)", () => {
-  test.setTimeout(180_000);
+async function connectInjectedWallet(page: Page): Promise<string> {
+  await page.goto("/");
+  const address = await page.evaluate(async () => {
+    const fn = (window as unknown as { __e2eConnectInjected?: () => Promise<string | undefined> })
+      .__e2eConnectInjected;
+    if (!fn) throw new Error("window.__e2eConnectInjected is not defined -- E2EWalletHook did not mount");
+    return fn();
+  });
+  if (!address) throw new Error("connect() resolved with no account");
+  return address;
+}
 
-  test("connect detects the injected test wallet", async ({ page }) => {
-    const privateKey = randomHexPrivateKey();
-    await installTestWallet(page, privateKey);
-    await page.goto("/");
+async function waitForTxConfirmedAndGetHash(page: Page): Promise<string> {
+  await expect(page.getByText("Transaction confirmed.")).toBeVisible({ timeout: 120_000 });
+  const hashLocator = page.locator("span.font-mono-data", { hasText: /^0x[0-9a-fA-F]+$/ });
+  const hash = await hashLocator.first().textContent();
+  return hash?.trim() ?? "";
+}
 
-    await page.getByRole("button", { name: "Connect wallet" }).click();
+const txLog: Record<string, string> = {};
 
-    // The AppKit modal should list our injected/announced wallet as an
-    // available option (by its announced name) rather than only showing
-    // remote options like WalletConnect/MetaMask-the-extension (which
-    // isn't actually installed in this headless browser).
-    const found = await page
-      .getByText(/WitnessMark Test Wallet/i)
-      .first()
-      .isVisible({ timeout: 15_000 })
-      .catch(() => false);
+test.describe("signed StudioNet lifecycle (real injected test wallets, no mocks)", () => {
+  test.setTimeout(15 * 60_000);
 
-    test.skip(
-      !found,
-      "The injected/EIP-6963 test wallet was not detected by AppKit's connector UI in this environment -- " +
-        "see docs/testing.md's 'Signed E2E' section for exactly what this does and doesn't tell us. " +
-        "This is the harness not being detected, not a WitnessMark application bug (the same wallet-connect " +
-        "flow independently opens correctly for real wallets, verified in e2e/navigation.spec.ts).",
-    );
+  test("create -> accept -> authenticated evidence upload -> submit -> resolve -> contest/resolve_contest", async ({
+    browser,
+  }) => {
+    const creatorKey = randomHexPrivateKey();
+    const counterpartyKey = randomHexPrivateKey();
 
-    await page.getByText(/WitnessMark Test Wallet/i).first().click();
-    await expect(page.getByRole("button", { name: /0x/i })).toBeVisible({ timeout: 20_000 });
+    const creatorContext = await browser.newContext();
+    const counterpartyContext = await browser.newContext();
+    await installTestWallet(creatorContext, creatorKey);
+    await installTestWallet(counterpartyContext, counterpartyKey);
+
+    const creatorPage = await creatorContext.newPage();
+    const counterpartyPage = await counterpartyContext.newPage();
+    creatorPage.on("console", (msg) => console.log(`[creator page console] ${msg.text()}`));
+    counterpartyPage.on("console", (msg) => console.log(`[counterparty page console] ${msg.text()}`));
+
+    const creatorAddress = await connectInjectedWallet(creatorPage);
+    const counterpartyAddress = await connectInjectedWallet(counterpartyPage);
+    expect(creatorAddress.toLowerCase()).not.toBe(counterpartyAddress.toLowerCase());
+    console.log(`creator=${creatorAddress} counterparty=${counterpartyAddress}`);
+
+    // ---- create_promise ------------------------------------------------
+    await creatorPage.goto("/promises/new");
+    await creatorPage.getByLabel("Title").fill("E2E: Sample delivery matches specification");
+    await creatorPage
+      .getByLabel("Statement")
+      .fill("The delivered sample will match the agreed reference specification exactly.");
+    await creatorPage
+      .getByLabel("Conditions")
+      .fill(
+        "The fetched evidence page must be a real, live, publicly reachable HTML document, standing in as " +
+          "the delivery-confirmation record for this automated end-to-end test.",
+      );
+    await creatorPage.getByRole("button", { name: "Continue" }).click();
+
+    await creatorPage.getByLabel("Counterparty address").fill(counterpartyAddress);
+    await creatorPage.getByRole("button", { name: "Continue" }).click();
+
+    await creatorPage
+      .getByLabel("Evidence requirements")
+      .fill("A link to a live, publicly reachable page confirming delivery.");
+    await creatorPage.getByRole("button", { name: "Continue" }).click();
+
+    await creatorPage.getByLabel("Stake amount (GEN)").fill("1");
+    await creatorPage.getByRole("button", { name: "Continue" }).click();
+
+    await creatorPage.getByRole("button", { name: "Sign and create promise" }).click();
+    await expect(creatorPage.getByText("Promise created")).toBeVisible({ timeout: 120_000 });
+    const createTxHash = await creatorPage.locator("p.font-mono-data").first().textContent();
+    txLog.create_promise = createTxHash?.trim() ?? "";
+    console.log(`create_promise tx: ${txLog.create_promise}`);
+
+    await creatorPage.getByRole("button", { name: "View promise" }).click();
+    await creatorPage.waitForURL(/\/promises\/\d+$/);
+    const promiseId = creatorPage.url().match(/\/promises\/(\d+)$/)?.[1];
+    if (!promiseId) throw new Error(`Could not extract promise id from URL ${creatorPage.url()}`);
+    console.log(`promise id: ${promiseId}`);
+
+    // ---- accept_promise --------------------------------------------------
+    await counterpartyPage.goto(`/promises/${promiseId}`);
+    await counterpartyPage.getByRole("button", { name: "Accept promise" }).click();
+    txLog.accept_promise = await waitForTxConfirmedAndGetHash(counterpartyPage);
+    console.log(`accept_promise tx: ${txLog.accept_promise}`);
+
+    // ---- authenticated evidence upload + submit_evidence -----------------
+    await counterpartyPage.goto(`/promises/${promiseId}/evidence`);
+    const fileInput = counterpartyPage.locator('input[type="file"]');
+    await fileInput.setInputFiles({
+      name: "e2e-evidence.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("WitnessMark signed E2E test evidence file, generated " + new Date().toISOString()),
+    });
+    // Uploading triggers useAuth's signIn() (nonce -> personal_sign ->
+    // verify) automatically before the file reaches the backend -- a
+    // second real signature from the same injected wallet.
+    await expect(counterpartyPage.getByText(/Uploading…|Waiting for wallet signature/)).toBeVisible({ timeout: 10_000 }).catch(() => {});
+    await expect(counterpartyPage.locator('input[value^="https://"]').first()).toBeVisible({ timeout: 30_000 });
+
+    await counterpartyPage.getByRole("button", { name: "Submit evidence" }).click();
+    txLog.submit_evidence = await waitForTxConfirmedAndGetHash(counterpartyPage);
+    console.log(`submit_evidence tx: ${txLog.submit_evidence}`);
+
+    // ---- resolve_promise (real nondet adjudication) -----------------------
+    await creatorPage.goto(`/promises/${promiseId}`);
+    await creatorPage.getByRole("button", { name: "Run adjudication" }).click();
+    txLog.resolve_promise = await waitForTxConfirmedAndGetHash(creatorPage);
+    console.log(`resolve_promise tx: ${txLog.resolve_promise}`);
+
+    await creatorPage.reload();
+    const bodyText = await creatorPage.locator("body").innerText();
+    console.log(`post-resolve status visible on page: ${/VERDICT_PENDING|UNDETERMINED/.exec(bodyText)?.[0]}`);
+
+    const contestButton = creatorPage.getByRole("button", { name: "Contest verdict" });
+    const hasContest = await contestButton.isVisible().catch(() => false);
+
+    if (!hasContest) {
+      console.log(
+        "No verdict was recorded this run (adjudication landed on UNDETERMINED) -- contest/resolve_contest " +
+          "not reached. This is legitimate LLM-sampling behavior on this evidence fixture, not a bug -- " +
+          "see docs/testing.md's equivalent note on tests/integration/test_witnessmark_lifecycle.py's " +
+          "test_contest_round_reaches_a_terminal_state for the same, already-documented behavior.",
+      );
+    } else {
+      await contestButton.click();
+      txLog.contest_verdict = await waitForTxConfirmedAndGetHash(creatorPage);
+      console.log(`contest_verdict tx: ${txLog.contest_verdict}`);
+
+      await counterpartyPage.goto(`/promises/${promiseId}`);
+      await counterpartyPage.getByRole("button", { name: "Resolve contest" }).click();
+      txLog.resolve_contest = await waitForTxConfirmedAndGetHash(counterpartyPage);
+      console.log(`resolve_contest tx: ${txLog.resolve_contest}`);
+    }
+
+    console.log("FULL TX LOG:", JSON.stringify(txLog, null, 2));
+    expect(Object.keys(txLog).length).toBeGreaterThanOrEqual(4); // create, accept, submit_evidence, resolve at minimum
   });
 });

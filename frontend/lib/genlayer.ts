@@ -2,6 +2,7 @@
 
 import { createClient } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
+import { TransactionStatus } from "genlayer-js/types";
 import type { Address } from "viem";
 import { env, isContractConfigured } from "./env";
 import type { PromiseRecord, ActivityEvent, PlatformStats, Reputation, ProtocolConfig } from "./types";
@@ -10,22 +11,24 @@ import type { PromiseRecord, ActivityEvent, PlatformStats, Reputation, ProtocolC
 // contract. Every method name below is copied verbatim from
 // contracts/witnessmark_contract.py — never invent new ones here.
 
-function buildChain() {
-  if (env.genlayerChainId && env.genlayerRpcUrl) {
-    return {
-      id: Number(env.genlayerChainId),
-      name: "GenLayer",
-      rpcUrls: { default: { http: [env.genlayerRpcUrl] } },
-      nativeCurrency: { name: "GEN", symbol: "GEN", decimals: 18 },
-    };
-  }
-  return undefined;
-}
-
+// IMPORTANT: always pass genlayer-js's own `studionet` chain object here,
+// never a hand-built substitute. `ClientConfig.chain`'s public TypeScript
+// type only requires {id, name, rpcUrls, nativeCurrency}, which looks
+// like enough to reconstruct manually from env vars -- but genlayer-js's
+// actual write path needs GenLayer-specific runtime fields `studionet`
+// carries that aren't part of that public type (notably
+// `consensusMainContract`, used to build/send the real GenVM
+// transaction). A hand-built chain object silently passes typechecking
+// but breaks every write with "Cannot convert undefined to a BigInt" --
+// found via `frontend/e2e/signed-lifecycle.spec.ts`'s real signed E2E
+// test, which is the first thing that ever exercised this exact code
+// path with a real wallet (every prior write-path verification went
+// through gltest/genlayer-py directly, never through this file). If a
+// genuinely different GenLayer network needs supporting later, add its
+// own `genlayer-js/chains` export rather than reconstructing one by hand.
 export function getGenlayerClient(provider?: unknown) {
-  const chain = buildChain();
   return createClient({
-    chain: chain ?? studionet,
+    chain: studionet,
     endpoint: env.genlayerRpcUrl || undefined,
     provider: provider as never,
   });
@@ -131,6 +134,41 @@ export interface WriteArgs {
   account: `0x${string}`;
 }
 
+export interface WriteResult {
+  hash: string;
+  receipt: unknown;
+}
+
+// genlayer-js's `writeContract` returns only the raw transaction hash the
+// wallet signed -- it does NOT wait for GenLayer consensus to accept the
+// transaction (see backend/scripts/wm-lib.cjs's `write()`, which follows
+// this same two-step pattern against the same contract). Every write here
+// used to return that bare hash straight to the UI, which treated it as
+// "confirmed" the instant the wallet returned -- before the transaction had
+// actually been through consensus at all, and with no way to recover the
+// hash (a bare string doesn't have a `.hash`/`.tx_hash` field, which is what
+// the UI was actually checking for). Found via
+// frontend/e2e/signed-lifecycle.spec.ts's real signed E2E test: "Promise
+// created" rendered with no tx hash and no promise id ever shown, on the
+// very first live run against a real wallet.
+async function writeAndWait(
+  client: ReturnType<typeof getGenlayerClient>,
+  args: {
+    account: { address: string };
+    address: Address;
+    functionName: string;
+    args: unknown[];
+    value: bigint;
+  },
+): Promise<WriteResult> {
+  const hash = await client.writeContract(args as never);
+  const receipt = await client.waitForTransactionReceipt({
+    hash: hash as never,
+    status: TransactionStatus.ACCEPTED,
+  } as never);
+  return { hash: String(hash), receipt };
+}
+
 export async function createPromise(
   { provider, account }: WriteArgs,
   params: {
@@ -147,8 +185,8 @@ export async function createPromise(
 ) {
   const client = getGenlayerClient(provider);
   const address = requireAddress();
-  return client.writeContract({
-    account: { address: account } as never,
+  return writeAndWait(client, {
+    account: { address: account },
     address,
     functionName: "create_promise",
     args: [
@@ -168,8 +206,8 @@ export async function createPromise(
 export async function acceptPromise({ provider, account }: WriteArgs, promiseId: number) {
   const client = getGenlayerClient(provider);
   const address = requireAddress();
-  return client.writeContract({
-    account: { address: account } as never,
+  return writeAndWait(client, {
+    account: { address: account },
     address,
     functionName: "accept_promise",
     args: [promiseId],
@@ -180,8 +218,8 @@ export async function acceptPromise({ provider, account }: WriteArgs, promiseId:
 export async function cancelPromise({ provider, account }: WriteArgs, promiseId: number) {
   const client = getGenlayerClient(provider);
   const address = requireAddress();
-  return client.writeContract({
-    account: { address: account } as never,
+  return writeAndWait(client, {
+    account: { address: account },
     address,
     functionName: "cancel_promise",
     args: [promiseId],
@@ -197,8 +235,8 @@ export async function submitEvidence(
 ) {
   const client = getGenlayerClient(provider);
   const address = requireAddress();
-  return client.writeContract({
-    account: { address: account } as never,
+  return writeAndWait(client, {
+    account: { address: account },
     address,
     functionName: "submit_evidence",
     args: [promiseId, JSON.stringify(urls), note],
@@ -209,8 +247,8 @@ export async function submitEvidence(
 export async function resolvePromise({ provider, account }: WriteArgs, promiseId: number) {
   const client = getGenlayerClient(provider);
   const address = requireAddress();
-  return client.writeContract({
-    account: { address: account } as never,
+  return writeAndWait(client, {
+    account: { address: account },
     address,
     functionName: "resolve_promise",
     args: [promiseId],
@@ -221,8 +259,8 @@ export async function resolvePromise({ provider, account }: WriteArgs, promiseId
 export async function finalizePromise({ provider, account }: WriteArgs, promiseId: number) {
   const client = getGenlayerClient(provider);
   const address = requireAddress();
-  return client.writeContract({
-    account: { address: account } as never,
+  return writeAndWait(client, {
+    account: { address: account },
     address,
     functionName: "finalize_promise",
     args: [promiseId],
@@ -233,8 +271,8 @@ export async function finalizePromise({ provider, account }: WriteArgs, promiseI
 export async function contestVerdict({ provider, account }: WriteArgs, promiseId: number, bondWei: bigint) {
   const client = getGenlayerClient(provider);
   const address = requireAddress();
-  return client.writeContract({
-    account: { address: account } as never,
+  return writeAndWait(client, {
+    account: { address: account },
     address,
     functionName: "contest_verdict",
     args: [promiseId],
@@ -245,8 +283,8 @@ export async function contestVerdict({ provider, account }: WriteArgs, promiseId
 export async function resolveContest({ provider, account }: WriteArgs, promiseId: number) {
   const client = getGenlayerClient(provider);
   const address = requireAddress();
-  return client.writeContract({
-    account: { address: account } as never,
+  return writeAndWait(client, {
+    account: { address: account },
     address,
     functionName: "resolve_contest",
     args: [promiseId],
@@ -257,8 +295,8 @@ export async function resolveContest({ provider, account }: WriteArgs, promiseId
 export async function timeoutUnacceptedReclaim({ provider, account }: WriteArgs, promiseId: number) {
   const client = getGenlayerClient(provider);
   const address = requireAddress();
-  return client.writeContract({
-    account: { address: account } as never,
+  return writeAndWait(client, {
+    account: { address: account },
     address,
     functionName: "timeout_unaccepted_reclaim",
     args: [promiseId],
@@ -269,8 +307,8 @@ export async function timeoutUnacceptedReclaim({ provider, account }: WriteArgs,
 export async function timeoutNoEvidenceReclaim({ provider, account }: WriteArgs, promiseId: number) {
   const client = getGenlayerClient(provider);
   const address = requireAddress();
-  return client.writeContract({
-    account: { address: account } as never,
+  return writeAndWait(client, {
+    account: { address: account },
     address,
     functionName: "timeout_no_evidence_reclaim",
     args: [promiseId],
@@ -281,8 +319,8 @@ export async function timeoutNoEvidenceReclaim({ provider, account }: WriteArgs,
 export async function forceRefundUndetermined({ provider, account }: WriteArgs, promiseId: number) {
   const client = getGenlayerClient(provider);
   const address = requireAddress();
-  return client.writeContract({
-    account: { address: account } as never,
+  return writeAndWait(client, {
+    account: { address: account },
     address,
     functionName: "force_refund_undetermined",
     args: [promiseId],

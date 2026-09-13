@@ -114,9 +114,109 @@ what is and isn't exercised end-to-end. In short:
 - Full nondeterministic adjudication, adversarial evidence content, and a
   full contest round are all exercised against real evidence fixtures and
   a live LLM (see the table above) — not merely asserted possible.
-- A single n=3 empirical convergence sample exists; a larger-N statistical
-  study across multiple evidence types and payout bands is still a
-  fast-follow (see `docs/security.md`).
+- A single n=3 empirical convergence sample exists for evidence that
+  reliably yields FULFILLED; `test_evidence_type_convergence.py` (below)
+  extends this to evidence types that lean BROKEN and toward
+  PARTIALLY_FULFILLED, each at n=5.
+- The two multi-day timeout windows and the 48h contest window ARE now
+  additionally exercised for real (not just their rejection path) via a
+  shortened test build — see "Long-timeout recovery tests" below.
+
+### Broader evidence-type convergence (`test_evidence_type_convergence.py`)
+
+```bash
+gltest tests/integration/test_evidence_type_convergence.py -v -s -m slow
+```
+
+Extends the single fixed-evidence convergence sample above across two more
+evidence types, n=5 each. Same caveat as above: not a pass/fail correctness
+assertion on the exact band, an empirical measurement.
+
+**Verified live against StudioNet, 2026-09-13:**
+
+| Evidence type | n | Observed bands |
+|---|---|---|
+| Real, live, fetchable page that plainly fails a specific checkable condition | 5 | `['BROKEN', 'BROKEN', 'BROKEN', 'BROKEN', 'BROKEN']` |
+| Real, live, fetchable page satisfying one of two explicit compound sub-conditions but not the other | 5 | `['BROKEN', 'BROKEN', 'BROKEN', 'BROKEN', 'BROKEN']` |
+
+The second row is the genuinely interesting result: it was designed to
+probe whether the adjudicator treats a compound condition (satisfies half)
+as PARTIALLY_FULFILLED or collapses it to BROKEN. Observed behavior, 5/5
+times, is that it collapses to BROKEN — a real, useful empirical finding
+about how the current adjudication prompt handles partial compliance,
+worth factoring into how promise `conditions` text is written (a
+compound condition phrased as "both (a) and (b)" reads to the model as an
+all-or-nothing gate, not a partial-credit one).
+
+**Deliberately not attempted**: a "changed evidence" / fully-ambiguous
+evidence-type sweep — evidence that shifts *between* resolve attempts, to
+exercise `resolve_promise`'s re-fetch-and-re-adjudicate path under
+genuinely changing input. Static test endpoints (httpbin.org and similar)
+can't produce that; it would need a controlled mutable evidence server,
+which is out of scope for this pass. Documented here rather than faked
+with a fixture that doesn't actually change.
+
+## Long-timeout recovery tests (shortened test build)
+
+```bash
+python3 scripts/generate_shortened_test_contract.py \
+    > _test_builds/long_timeout/witnessmark_contract.py
+genvm-lint check _test_builds/long_timeout/witnessmark_contract.py --json
+gltest --contracts-dir _test_builds/long_timeout \
+       --artifacts-dir artifacts_long_timeout \
+       tests/integration/test_long_timeout_recovery.py -v -s
+```
+
+The main `gltest` suite above only tests these three windows' **rejection**
+path (calling too early correctly reverts) — the real production windows
+are measured in days, and no interactive/CI run should block for days.
+`tests/integration/test_long_timeout_recovery.py` closes that gap for
+real: it runs against a generated, test-only build of the contract
+(`scripts/generate_shortened_test_contract.py`) with exactly three
+duration constants — `EVIDENCE_LATE_GRACE_SECONDS`,
+`UNDETERMINED_GRACE_SECONDS`, `CONTEST_WINDOW_SECONDS` — shortened from
+days/hours to 45 seconds by regex substitution over known constant
+assignment lines; every other line is byte-identical to
+`contracts/witnessmark_contract.py`, and the generator refuses to run if
+it can't find and replace exactly those three names, so this can't
+silently drift into testing different logic than production. The
+generated file is gitignored and deployed only to its own disposable
+StudioNet instance by this test file's own fixture — production is never
+touched, and its own deploy is always from
+`contracts/witnessmark_contract.py` unmodified.
+
+Scheduled weekly (`.github/workflows/long-timeout-tests.yml`,
+`workflow_dispatch` also available) rather than run on every push — each
+run spends several real minutes sleeping out shortened windows.
+
+**Building this surfaced and fixed two real bugs, neither in the
+production contract:**
+1. `get_contract_factory("WitnessMark")`'s default search
+   (`search_path_by_class_name`) scans its configured contracts directory
+   **recursively**. The generated file's first location,
+   `contracts/_long_timeout_test_build/`, is nested under `contracts/`,
+   so it collided with the real `contracts/witnessmark_contract.py` and
+   broke the entire main suite with `ValueError: Multiple contracts named
+   'WitnessMark' found`. Fixed by relocating the generated build to
+   `_test_builds/long_timeout/`, a sibling of `contracts/` entirely
+   outside its search root.
+2. GenVM requires its runtime-version/`Depends` pragma comments
+   (`# v0.2.18` / `# { "Depends": ... }`) to be the literal first lines of
+   the file. The generator's "GENERATED TEST-ONLY BUILD" banner comment
+   was being prepended ahead of them, which silently broke every
+   deployment of the shortened build (`gltest.exceptions.DeploymentError`,
+   leader `execution_result: 'ERROR'` with empty stdout/stderr — GenVM
+   couldn't find its own pragma). Fixed by emitting the pragma lines
+   first and the banner immediately after.
+
+**Verified live against StudioNet, 2026-09-13:**
+
+| Test | Result |
+|---|---|
+| `test_shortened_build_config_confirms_the_override` | **passed** — confirms the deployed build actually has the 45s overrides, and that every OTHER config value still matches production exactly |
+| `test_timeout_no_evidence_reclaim_succeeds_after_the_real_grace_period` | **passed** — slept out the real (shortened) evidence grace period, then a stranger's permissionless reclaim actually succeeded |
+| `test_force_refund_undetermined_succeeds_after_real_exhaustion_and_grace` | **passed** — exhausted all 5 real `resolve_promise` attempts (each landing on UNDETERMINED against an unfetchable evidence link), slept out the real grace period, then the refund actually succeeded |
+| `test_finalize_promise_succeeds_after_the_real_contest_window` | **skipped** this run — first `resolve_promise` landed on `UNDETERMINED` rather than a recorded verdict (the same legitimate LLM-sampling outcome documented above for the main suite's contest test); re-run individually to land past it |
 
 ## Backend: `vitest` + `supertest`
 
@@ -235,54 +335,74 @@ hamburger menu, then watching the same test pass. The
 `test.describe("mobile navigation")` block's first test is a standing
 regression test for exactly this.
 
-### Signed E2E — attempted, and exactly where it stands
+### Signed E2E — working harness, two real production bugs found
 
-`e2e/signed-lifecycle.spec.ts` is a real, working attempt at a
-wallet-mocking harness for a fully signed StudioNet lifecycle: it
-injects a real `window.ethereum` EIP-1193 provider (and announces via
-EIP-6963) backed by a genuine viem local account (`privateKeyToAccount`,
-imported live from a CDN inside the injected script), capable of
-answering `personal_sign` and `eth_sendTransaction` with real signatures
-against StudioNet — the actual infrastructure the earlier version of
-this doc said didn't exist yet.
+`e2e/signed-lifecycle.spec.ts` drives the full connect → create → accept
+→ authenticated evidence upload → submit → resolve →
+contest/resolve_contest journey through the actual deployed UI with real
+signed transactions — no mocks. Two browser contexts (creator,
+counterparty), each with its own injected `window.ethereum` EIP-1193
+provider (announced via EIP-6963) backed by a genuine viem local account,
+capable of answering `personal_sign` and `eth_sendTransaction` with real
+signatures against StudioNet.
 
-**What was verified**: the provider itself is correctly constructed and
-would sign/send real transactions if invoked. **What was NOT achieved**:
-Reown AppKit's connector-selection UI, on this deployed AppKit version,
-does not surface the injected/EIP-6963-announced test wallet as a
-selectable option in its modal — the modal shows only its curated
-remote/deep-link wallet list (WalletConnect, Trust Wallet, MetaMask,
-Binance Wallet, SafePal), the same list a real browser with no wallet
-extension installed would see. This was confirmed by screenshot, not
-assumed: the modal renders correctly, it simply never lists the injected
-wallet as a choice, so there is no click path from "open modal" to
-"select the test wallet" to drive the rest of the flow through.
+The earlier version of this doc described this test as blocked: Reown
+AppKit's connector-selection modal doesn't surface an injected/EIP-6963
+test wallet as a selectable option, so there was no click path into it
+through the modal. That's now bypassed rather than worked around inside
+AppKit — `components/E2EWalletHook.tsx` exposes
+`window.__e2eConnectInjected`, which calls wagmi's own `connect()` action
+directly against the `injected()` connector, skipping AppKit's modal UI
+entirely. It's mounted unconditionally in `app/providers.tsx` (not gated
+behind an env var): it exposes no secret and cannot move funds by
+itself, since driving it still requires a real signature from whatever
+wallet is actually injected in that browser context.
 
-The test therefore calls `test.skip()` with this exact explanation
-rather than failing or (worse) silently passing having done nothing —
-run it yourself (`npx playwright test signed-lifecycle`) to see the same
-skip. Closing this gap for real would need either: a wagmi/AppKit
-connector configuration that surfaces injected providers more directly
-(bypassing AppKit's curated-wallet UI layer entirely), or driving the
-underlying wagmi `connect()` call straight from the test via
-`page.evaluate` against the app's own wagmi config rather than through
-AppKit's modal UI at all. Neither was completed in this pass.
+**Running this for the first time against a real wallet found two
+previously-undiscovered production bugs — both since every prior
+write-path check went through `gltest`/`genlayer-py` directly, never
+through this exact frontend code path:**
 
-**What this leaves genuinely uncovered**: the full connect → create →
-accept → authenticated evidence upload → submit → resolve →
-contest/finalize journey with real signed transactions, end-to-end,
-through the actual UI. Every individual contract operation in that
-journey IS independently verified live against StudioNet already, just
-via `gltest` (see above) rather than a browser click-through: creation,
-acceptance, evidence submission (including the domain-independence and
-deadline rules), adjudication (including prompt-injection resistance),
-and the contest bond check are all covered by real on-chain transactions
-in the `gltest` suite, and a full 4-scenario product-test battery
-(`docs/live-product-tests.md`) exercises the same operations via
-direct genlayer-js calls rather than the browser UI. What a
-browser-driven E2E would add beyond both of those is proof the UI itself
-correctly drives those same operations — a real, still-open gap, and a
-smaller and more precisely-scoped one than "nothing is tested live."
+1. **`lib/genlayer.ts`'s `buildChain()`** constructed a hand-built chain
+   object from env vars instead of using genlayer-js's own `studionet`
+   export, whenever both `NEXT_PUBLIC_GENLAYER_CHAIN_ID` and
+   `NEXT_PUBLIC_GENLAYER_RPC_URL` were set — which they always are in
+   production. That object satisfies `ClientConfig.chain`'s public
+   TypeScript type but is missing GenLayer-specific runtime fields
+   (`consensusMainContract`) the real write path needs internally,
+   breaking every real signed write with "Cannot convert undefined to a
+   BigInt". Fixed by always passing `studionet` directly; redeployed
+   immediately as a critical fix.
+2. **Every write function in `lib/genlayer.ts`** (all 11 of them)
+   returned only the raw hash `writeContract` gives back — which is a
+   bare string, not an object — and never called
+   `waitForTransactionReceipt`, so the UI marked a transaction
+   "confirmed" the instant the wallet returned, before GenLayer consensus
+   had actually accepted it, with no way to recover the real hash or the
+   newly-created promise id. Confirmed live: after fix #1, the "Promise
+   created" screen rendered with no tx hash and no promise id shown, on
+   the very first real run. Fixed with a shared `writeAndWait` helper
+   that calls `waitForTransactionReceipt` (status `ACCEPTED`) after every
+   write — the same two-step pattern `backend/scripts/wm-lib.cjs` already
+   used correctly against this same contract — and by deriving the
+   created promise's id from `get_promise_count() - 1` after the write
+   confirms, rather than guessing at the receipt's shape.
+
+Fix #1 has been redeployed to production. Fix #2 is applied and passes
+`tsc --noEmit`, `npm run lint`, and `npm run build`, but had not yet been
+redeployed or re-verified end-to-end via this test as of this writing —
+see `MEMORY.md`/the latest session notes for current status.
+
+**What this leaves genuinely uncovered until the next successful full
+run**: end-to-end proof that the browser UI drives the complete signed
+lifecycle correctly. Every individual contract operation in that journey
+IS independently verified live against StudioNet already, just via
+`gltest` (see above) and the direct genlayer-js product-test battery
+(`docs/live-product-tests.md`) rather than a browser click-through — so
+what remains open is narrower than "nothing is tested live": specifically
+whether the UI's own request-building and receipt-handling code (as
+opposed to the contract itself) is correct, which is exactly the class of
+bug this test already found twice.
 
 ## CI
 
@@ -290,7 +410,11 @@ smaller and more precisely-scoped one than "nothing is tested live."
 `gltest` subset (`contract-integration` job — a real StudioNet run, not
 just lint, ~17 minutes), backend typecheck + `vitest` + build, frontend
 lint + `vitest` + build, and frontend Playwright E2E (`frontend-e2e` job)
-against the live deployed app. The slow `gltest` subset and a formal
-third-party security audit are deliberately NOT part of routine CI
-(cost/time), and should instead run on a schedule or before any
-mainnet-equivalent deployment.
+against the live deployed app. The slow `gltest` subset, the signed E2E
+test, and a formal third-party security audit are deliberately NOT part
+of routine CI (cost/time), and should instead run on a schedule or before
+any mainnet-equivalent deployment.
+
+`.github/workflows/long-timeout-tests.yml` runs the long-timeout recovery
+suite above on a weekly schedule (`workflow_dispatch` also available) —
+also not on every push, for the same reason.

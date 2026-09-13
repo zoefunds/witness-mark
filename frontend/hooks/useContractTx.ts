@@ -27,7 +27,7 @@ export function useContractTx() {
         const provider = await connector.getProvider();
         setState("confirming");
         const result = await fn({ provider, account: address });
-        const hash = (result as { hash?: string; tx_hash?: string })?.hash ?? (result as { tx_hash?: string })?.tx_hash;
+        const hash = (result as { hash?: string })?.hash;
         if (hash) setTxHash(String(hash));
         setState("confirmed");
         return result;
