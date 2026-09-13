@@ -131,26 +131,20 @@ structure is identical either way:
   client-side action-availability logic against every contract status ×
   role combination, and money/time formatting precision.
 - **Signed browser E2E**: a real, no-mocks Playwright test drives two
-  independently-injected wallets through the actual deployed UI —
-  connect → create → accept → authenticated evidence upload → submit →
-  resolve — and passed end-to-end against production, confirming every
-  step with a real on-chain tx hash. See `docs/testing.md`'s "Signed E2E"
-  section.
-- **Live contest-to-payout settlement**: a full `contest_verdict` →
-  `resolve_contest` round has completed live against StudioNet, with a
-  genuine `OVERTURNED` outcome and both the stake and the contest bond
-  paid out in the same transaction — see
-  `docs/live-product-tests.md`. That run was driven directly via
-  genlayer-js, not yet through the browser UI or the `gltest` suite's own
-  equivalent test (both still pending a run whose adjudication happens to
-  land on a recorded verdict rather than `UNDETERMINED` first — legitimate
-  LLM-sampling variance, not a bug; see `docs/testing.md`'s live-run
-  history).
-- **Still open, honestly**: a formal third-party contract audit, and the
-  browser-UI contest/`resolve_contest` branch specifically (the rest of
-  the lifecycle above IS proven through the browser). Neither blocks a
-  StudioNet demo or capped-stake beta; both should exist before the
-  protocol handles meaningful, uncapped real value.
+  independently-injected wallets through the actual deployed UI — connect
+  → create → accept → authenticated evidence upload → submit → resolve →
+  contest → resolve_contest — and has passed end-to-end against
+  production, confirming every step (including the contest round) with a
+  real on-chain tx hash and a genuine `FULFILLED`/`UPHELD` settlement with
+  the stake fully drained. See `docs/testing.md`'s "Signed E2E" section.
+- **Live contest-to-payout settlement**: in addition to the browser run
+  above, a full `contest_verdict` → `resolve_contest` round has also
+  completed live via direct genlayer-js calls and via the `gltest` suite,
+  with outcomes including a genuine `OVERTURNED` result — see
+  `docs/live-product-tests.md`.
+- **Still open, honestly**: a formal third-party contract audit. This
+  doesn't block a StudioNet demo or capped-stake beta; it should exist
+  before the protocol handles meaningful, uncapped real value.
 
 ## Stack
 

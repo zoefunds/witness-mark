@@ -404,24 +404,45 @@ simple writes at a smaller-but-still-generous budget.
 
 **Verified live against production, 2026-09-13, all three fixes
 deployed**: the full connect → create → accept → authenticated evidence
-upload → submit → resolve journey **passed end-to-end** through the real
-UI with two real injected wallets, no mocks — `create_promise`,
-`accept_promise`, `submit_evidence`, and `resolve_promise` all confirmed
-with real on-chain tx hashes. This run's adjudication landed on
-`UNDETERMINED` rather than a recorded verdict, so the test gracefully
-logged and skipped the contest/`resolve_contest` branch — the same
-legitimate LLM-sampling outcome already documented above for
-`test_contest_round_reaches_a_terminal_state`, not a failure. Re-run
-(`npx playwright test signed-lifecycle`) to land past it and exercise
-that branch too.
+upload → submit → resolve → contest → resolve_contest journey **passed
+end-to-end** through the real UI with two real injected wallets, no
+mocks — every step confirmed with a real on-chain tx hash. Two runs are
+worth recording, since they show the same code path under both outcomes
+the adjudication step can produce:
+- First run: adjudication landed on `UNDETERMINED` rather than a
+  recorded verdict, so the test gracefully logged and skipped the
+  contest/`resolve_contest` branch — the same legitimate LLM-sampling
+  outcome already documented above for
+  `test_contest_round_reaches_a_terminal_state`, not a failure.
+- Second run (evidence fixture switched from a plain-text upload to a
+  genuine HTML file, matching this promise's own condition text —
+  see below): adjudication landed on a recorded `FULFILLED` verdict,
+  the creator's counterparty contested it, and `resolve_contest`
+  completed the round with outcome `UPHELD`, `final_band: FULFILLED`,
+  and `stake_deposited_wei: 0` — confirmed by reading the promise back
+  from the contract afterward, not just from the UI. This is the first
+  time the contest branch has been exercised through the browser UI
+  specifically (the `gltest` suite and the direct product-test battery
+  had already exercised it independently — see
+  `docs/live-product-tests.md`).
 
-**What this leaves genuinely uncovered**: the contest/`resolve_contest`
-leg specifically, through the browser UI, pending a run whose
-adjudication happens to land on a recorded verdict rather than
-`UNDETERMINED` — that leg IS independently verified live via `gltest`
-and the direct genlayer-js product-test battery
-(`docs/live-product-tests.md`) already, just not yet through this exact
-browser click-through.
+The evidence-fixture change also matters on its own: the test originally
+uploaded a plain `.txt` file against a promise condition requiring "a
+real, live, publicly reachable HTML document" — a real mismatch between
+what was claimed and what was actually delivered, which plausibly made
+`UNDETERMINED` more likely than it needed to be. Uploading genuine HTML
+content instead (still through the real authenticated-upload path, still
+fetched for real by the contract) removes that self-inflicted noise
+without changing what the test is actually proving.
+
+**What this leaves genuinely uncovered**: nothing structural — the full
+lifecycle including the contest branch is now proven through the browser
+UI at least once. What remains is the same kind of thing true of any
+nondeterministic-adjudication test: a given run's exact verdict band
+isn't guaranteed, so this exact pass isn't a permanent guarantee future
+runs land a verdict on the first try rather than `UNDETERMINED` — that
+variance is inherent to the adjudication itself, not a gap in what's
+tested.
 
 ## CI
 

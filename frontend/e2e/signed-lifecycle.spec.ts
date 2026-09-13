@@ -214,10 +214,20 @@ test.describe("signed StudioNet lifecycle (real injected test wallets, no mocks)
     // ---- authenticated evidence upload + submit_evidence -----------------
     await counterpartyPage.goto(`/promises/${promiseId}/evidence`);
     const fileInput = counterpartyPage.locator('input[type="file"]');
+    // Upload genuine HTML content (not plain text) so the fetched evidence
+    // actually matches the promise's own condition text below ("a real,
+    // live, publicly reachable HTML document") -- an earlier version of
+    // this test uploaded a .txt file against that same condition, which
+    // made adjudication far less likely to converge on a clean verdict
+    // (mismatched evidence type is exactly the kind of thing that pushes
+    // toward UNDETERMINED/BROKEN rather than FULFILLED).
     await fileInput.setInputFiles({
-      name: "e2e-evidence.txt",
-      mimeType: "text/plain",
-      buffer: Buffer.from("WitnessMark signed E2E test evidence file, generated " + new Date().toISOString()),
+      name: "e2e-evidence.html",
+      mimeType: "text/html",
+      buffer: Buffer.from(
+        `<!doctype html><html><head><title>WitnessMark E2E delivery confirmation</title></head>` +
+          `<body><h1>Delivery confirmed</h1><p>WitnessMark signed E2E test evidence, generated ${new Date().toISOString()}.</p></body></html>`,
+      ),
     });
     // Uploading triggers useAuth's signIn() (nonce -> personal_sign ->
     // verify) automatically before the file reaches the backend -- a
