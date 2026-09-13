@@ -12,6 +12,7 @@ checked — see `docs/security.md` for what's already covered).
 - [ ] **Formal third-party security audit completed** — still outstanding as of this writing; required before uncapped real value.
 - [ ] Deployed by the project owner (never by an automated agent), address recorded in `MEMORY.md`.
 - [ ] New address wired into `backend/.env` (`GENLAYER_CONTRACT_ADDRESS`, as a Fly secret) and `frontend/.env.local` (`NEXT_PUBLIC_CONTRACT_ADDRESS`, as a Vercel env var).
+- [ ] `node backend/scripts/verify-deployment.mjs` passes (source hash AND method inventory both match the deployed instance exactly) — update `docs/deployment-manifest.md` with the new hash/commit/address either way, noting any known drift explicitly if it doesn't yet pass.
 
 ## Backend
 
@@ -36,9 +37,15 @@ checked — see `docs/security.md` for what's already covered).
 ## Not yet part of this checklist (fast-follows)
 
 - Browser E2E covering a full SIGNED-transaction journey (create →
-  accept → submit evidence → resolve → contest/finalize) — needs a
-  wallet-mocking harness (injected EIP-1193 provider backed by a real
-  signing key, bridged to a live StudioNet RPC). Page-load/navigation
-  E2E and the individual contract operations are both already covered
-  live (Playwright + `gltest` respectively) — see `docs/testing.md`.
+  accept → submit evidence → resolve → contest/finalize) through the
+  actual UI. A working wallet-mocking harness (injected EIP-1193 +
+  EIP-6963 provider backed by a real signing key) exists
+  (`e2e/signed-lifecycle.spec.ts`), but Reown AppKit's connector-picker
+  UI doesn't currently surface it as a selectable option — see
+  `docs/testing.md`'s "Signed E2E" section for exactly where this stands.
+  Page-load/navigation E2E and the individual contract operations are
+  both already covered live (Playwright + `gltest` respectively).
+- A larger-N statistical study of validator convergence (beyond the
+  current n=3 empirical sample) across more evidence types (broken,
+  partial, ambiguous, changed-after-submission).
 - A demo video.

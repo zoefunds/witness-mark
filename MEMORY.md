@@ -495,6 +495,111 @@ User explicitly said no screen recording/video needed. Addressed:
 - No demo video produced (user explicitly said not needed).
 - `docs/testing.md` and `docs/release-checklist.md` updated accordingly.
 
+## External review round 7 fixes (2026-09-13)
+A comprehensive brief covering product focus, contract safeguards,
+deployment verification, and engineering-quality gaps. Addressed:
+
+- **Product narrowing**: README and landing page now lead with
+  non-custodial procurement/delivery assurance as the flagship use case,
+  with an explicit "why this can't be a centralized API" argument
+  (conflicting incentives between seller/buyer/platform over real money).
+  Category default changed to "procurement" in the create-promise wizard.
+  General-purpose categories kept as secondary, not removed.
+- **Doc contradictions fixed**: `docs/architecture.md`'s stale "docs/
+  contract.md (TODO)" (the file has existed for rounds), `frontend/
+  FRONTEND_STATUS.md`'s stale "no Playwright coverage" claim (added
+  round 6), and a third found in the same pass: a stale `sameSite=lax`
+  claim in `docs/security.md` (changed to `none` in round 2). Rewrote
+  `FRONTEND_STATUS.md`'s testing bullet to point at `docs/testing.md` as
+  the single source of truth instead of restating counts that drift.
+- **Architecture diagram added** (`docs/architecture.md`, mermaid) showing
+  explicitly that the backend has zero presence on the value-moving path
+  — every write is wallet-signed directly against the contract; the
+  backend's entire role is cached reads, file upload, and session auth.
+- **Deployment verification tooling built**: `backend/scripts/
+  verify-deployment.mjs` reads the deployed contract's exact source
+  (`getContractSchema`/`getContractCode`) directly from chain and diffs
+  it against `contracts/witnessmark_contract.py` — sha256 hash AND full
+  method inventory. **It immediately found a real, previously-
+  undetected drift**: `get_config()` gained 3 read-only fields
+  (`evidence_late_grace_seconds`, `high_value_stake_threshold_wei`,
+  `min_evidence_items_high_value`) in source after the currently-
+  deployed instance (`0x8646e58436bb191680B28b9b85b799C856CfCA64`) went
+  live. Documented precisely, with exact before/after values, in the new
+  `docs/deployment-manifest.md` — not a behavior change (those values
+  were already enforced internally; only their exposure via the view
+  method is new), so a redeploy is a should-do, not an emergency. Wired
+  into CI as `deployment-verification` (continue-on-error: true while
+  this known gap stands, since a red check here is the tool correctly
+  doing its job).
+- **Signed-wallet E2E attempted and built**: `frontend/e2e/
+  signed-lifecycle.spec.ts` implements a real injected EIP-1193 +
+  EIP-6963 test wallet backed by a genuine viem local account (private
+  key generated fresh per test, signs/sends for real against StudioNet
+  when invoked). **Confirmed by screenshot**: Reown AppKit's connector
+  modal does not currently surface this injected/announced wallet as a
+  selectable option — it shows only its curated remote-wallet list
+  (WalletConnect, Trust, MetaMask, Binance, SafePal). The test calls
+  `test.skip()` with this exact explanation rather than failing or
+  falsely passing. Documented in `docs/testing.md`'s "Signed E2E"
+  section, including what WAS verified (the provider itself is
+  correctly constructed) vs. not (no click path to select it exists).
+- **New contract-level test**: `test_escrow_conservation_across_cancel`
+  in `tests/integration/test_witnessmark_lifecycle.py` — a wei-exact
+  balance-delta conservation check (contract balance decreases by
+  exactly the stake, creator balance increases by exactly the stake),
+  not just a status-field assertion. Writing it surfaced two real,
+  separate findings, both documented in `docs/security.md`, neither a
+  contract defect:
+  1. **StudioNet's balance RPC lags real transaction finality by up to
+     ~20-30 seconds**, even after `wait_triggered_transactions=True` on
+     the triggering call. Confirmed by direct polling measurement (stale
+     at t+10s/t+20s, correct at t+30s). Fixed via a `_poll_until` helper
+     rather than a single immediate read.
+  2. **A cross-test contamination risk**: this test file's fixtures
+     reuse `accounts[0]`/`accounts[1]` as creator/counterparty across
+     nearly every test. Combined with the lag above, a balance-delta
+     assertion on a shared account can pick up a DIFFERENT test's
+     delayed refund landing mid-test (observed for real: a 5 GEN delta
+     where 3 GEN was expected, the extra 2 GEN being a sibling test's
+     late-arriving refund to the same shared account). Fixed by using a
+     dedicated `create_account()` for this specific test instead of a
+     shared fixture account.
+  - **Full fast suite re-verified after both fixes: 19/19 passing**
+    (18/19 in one full run + 1 clean isolated retry after a transient,
+    unrelated StudioNet connection reset during that test's own
+    contract deployment — infra flakiness, not a code issue).
+- **Real Postgres/Redis backend integration tests added**
+  (`backend/tests/integration/`, `npm run test:integration`,
+  `backend/docker-compose.test.yml` for local dev) — 16 tests against
+  ACTUAL Postgres and Redis instances, not mocks: real SQL against the
+  real schema, real TTL expiry, real signature verification against a
+  real DB-persisted nonce (including cross-account rejection and
+  single-use replay rejection), and the evidence-upload/promise-sync
+  authorization fixes verified by querying real tables afterward. Only
+  the GenLayer chain read and Cloudinary's actual upload call stay
+  mocked. Wired into CI (`backend-integration` job, GitHub Actions
+  native Postgres/Redis services). Writing this suite found and fixed a
+  real test-environment gap: `src/db/pool.ts` requires SSL by default
+  unless the connection string says `sslmode=disable` (correct
+  production behavior for Fly Postgres) — the test setup now sets this
+  explicitly. Also found and fixed: `backend/vitest.config.ts` had no
+  `include`/`exclude`, so the default (mocked) unit-test run was picking
+  up the new `tests/integration/*.integration.test.ts` files too and
+  running them against the wrong (mocked) setup — now explicitly scoped
+  to `tests/*.test.ts` only.
+- Frontend redeployed (product-copy changes) and confirmed live; backend
+  unchanged this round (script/test additions only, no route/behavior
+  changes needing redeploy).
+- Still genuinely open, stated plainly: a completed signed-transaction
+  browser E2E (blocked on AppKit's connector UI, not on the harness
+  itself, which works), a redeploy to close the `get_config()` drift,
+  scheduled long-running tests for the two multi-day timeout windows
+  (would need a deliberately-shortened test build, not attempted this
+  round), a larger-N empirical convergence study across more evidence
+  types (broken/partial/ambiguous/changed-after-submission), and a
+  formal third-party contract audit.
+
 ## Status log
 - 2026-08-27: Discovery Q&A completed (see Decisions above). Contract
   written, linted clean, **deployed by user to StudioNet** at the address
