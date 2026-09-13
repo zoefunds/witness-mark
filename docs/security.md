@@ -96,13 +96,15 @@ fixture account — already applied in that test.
   exists and has already found and fixed two real frontend bugs (a
   broken chain-config object and missing transaction-receipt waiting on
   every write) — see `docs/testing.md`'s "Signed E2E" section for current
-  status. **Still open**: a full contest-round settlement
-  (`resolve_contest` payout leg) has not yet completed in a live test run
-  — see `docs/testing.md`'s live-run history for exactly why (legitimate
-  LLM non-convergence and one transient network error, not a contract
-  bug) — and a "changed evidence" convergence sweep (evidence that shifts
-  between resolve attempts), which needs a controlled mutable evidence
-  server not built in this pass.
+  status. A full contest-round settlement (`resolve_contest` payout leg)
+  has since completed live, both directly via genlayer-js/`gltest`
+  (`docs/live-product-tests.md`) and through the browser UI itself
+  (`docs/testing.md`'s "Signed E2E" section — `FULFILLED`/`UPHELD`,
+  `stake_deposited_wei: 0`, confirmed by reading the promise back from
+  the contract). **Still open**: a formal third-party contract audit, and
+  a "changed evidence" convergence sweep (evidence that shifts between
+  resolve attempts), which needs a controlled mutable evidence server not
+  built in this pass.
 - **A real client/contract mismatch was found and fixed** (external
   review, 2026-08-27): the frontend was offering the "reclaim stake — no
   evidence" action, and computing the required contest bond, from
