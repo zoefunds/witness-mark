@@ -90,8 +90,9 @@ see `contracts/witnessmark_contract.py`'s `WitnessMark` class docstring.
 Both confirmed live and reading from this address (`/healthz`, `/readyz`,
 and `/api/stats` all verified post-deploy; the site returns 200).
 
-Note: this is a freshly-deployed instance, so `docs/live-product-tests.md`
-and any dashboard/reputation data from prior scenarios reflect the
-PREVIOUS address's history, not this one. Re-run the product-test battery
-against this address if fresh on-chain evidence is needed for this
-specific deployment.
+`docs/live-product-tests.md`'s 4-scenario battery has since been re-run
+against this exact address (2026-09-13), including a genuine `OVERTURNED`
+contest outcome — see that doc for the full run and real tx hashes. The
+signed browser E2E (`docs/testing.md`) has separately confirmed the full
+lifecycle, including the contest branch, through the real UI against
+this same address.

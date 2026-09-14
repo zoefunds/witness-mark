@@ -36,16 +36,12 @@ checked — see `docs/security.md` for what's already covered).
 
 ## Not yet part of this checklist (fast-follows)
 
-- Browser E2E covering a full SIGNED-transaction journey (create →
-  accept → submit evidence → resolve → contest/finalize) through the
-  actual UI. A working wallet-mocking harness (injected EIP-1193 +
-  EIP-6963 provider backed by a real signing key) exists
-  (`e2e/signed-lifecycle.spec.ts`), but Reown AppKit's connector-picker
-  UI doesn't currently surface it as a selectable option — see
-  `docs/testing.md`'s "Signed E2E" section for exactly where this stands.
-  Page-load/navigation E2E and the individual contract operations are
-  both already covered live (Playwright + `gltest` respectively).
-- A larger-N statistical study of validator convergence (beyond the
-  current n=3 empirical sample) across more evidence types (broken,
-  partial, ambiguous, changed-after-submission).
+- A formal third-party contract audit — required before the protocol
+  handles meaningful, uncapped real value; see `docs/security.md`'s
+  "Known gaps" section.
+- A "changed evidence" convergence sweep (evidence that shifts between
+  resolve attempts, rather than a static fixture) — needs a controlled
+  mutable evidence server, not yet built. The broader n=5 convergence
+  study across BROKEN-leaning and compound/partial-condition evidence is
+  already done; see `docs/testing.md`.
 - A demo video.

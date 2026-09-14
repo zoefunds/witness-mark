@@ -112,9 +112,10 @@ with reality."
   (`evidence_late_grace_seconds`, `high_value_stake_threshold_wei`,
   `min_evidence_items_high_value`) that were missing on the prior
   deployment. See `docs/deployment-manifest.md` for the full record.
-  Note: `docs/live-product-tests.md`'s 4-scenario battery was run against
-  the PRIOR address (`0x8646e58436bb191680B28b9b85b799C856CfCA64`) — this
-  fresh instance has no on-chain history of its own yet.
+  `docs/live-product-tests.md`'s 4-scenario battery has since been
+  re-run against this exact address (2026-09-13), including a genuine
+  `OVERTURNED` contest outcome — see round 8 below and that doc for full
+  detail.
 - **Prior address (superseded): `0x8646e58436bb191680B28b9b85b799C856CfCA64`**
   (StudioNet). Fourth deployment. Database was confirmed already clean
   before this address went live (all tables 0 rows). Live product-test
@@ -535,9 +536,10 @@ deployment verification, and engineering-quality gaps. Addressed:
   `docs/deployment-manifest.md` — not a behavior change (those values
   were already enforced internally; only their exposure via the view
   method is new), so a redeploy is a should-do, not an emergency. Wired
-  into CI as `deployment-verification` (continue-on-error: true while
-  this known gap stands, since a red check here is the tool correctly
-  doing its job).
+  into CI as `deployment-verification` (`continue-on-error: true`
+  initially, while this known drift stood, since a red check here was the
+  tool correctly doing its job — removed in round 8 below once the
+  redeploy closed the gap and the job started passing for real).
 - **Signed-wallet E2E attempted and built**: `frontend/e2e/
   signed-lifecycle.spec.ts` implements a real injected EIP-1193 +
   EIP-6963 test wallet backed by a genuine viem local account (private
@@ -605,6 +607,87 @@ deployment verification, and engineering-quality gaps. Addressed:
   round), a larger-N empirical convergence study across more evidence
   types (broken/partial/ambiguous/changed-after-submission), and a
   formal third-party contract audit.
+
+## Round 8 fixes (2026-09-13 / 2026-09-14) — redeploy, signed E2E completion, long-timeout + broader convergence tests
+
+Closes out the items round 7 left open above (redeploy, signed E2E, long-
+timeout tests, larger-N convergence), plus fixes an external re-audit's
+findings on top.
+
+- **Redeployed contract** to `0x181eeE5ff3B1186b39f813129d57558Ad61Ff39B`,
+  closing the `get_config()` drift round 7 found. `deployment-manifest.md`
+  confirms a clean PASS (byte-identical source + full method/config
+  match). `deployment-verification`'s CI job had its address wired in
+  explicitly and `continue-on-error: true` removed — it's a hard,
+  passing gate now.
+- **Live product-test battery re-run** against the new address: 4
+  scenarios, this run producing a genuine `OVERTURNED` contest outcome
+  (previously only `UPHELD` had been observed) — full verbatim on-chain
+  reasoning and every tx hash in `docs/live-product-tests.md`.
+- **Signed browser E2E completed for real**, closing round 7's "blocked
+  on AppKit's connector UI" gap: `E2EWalletHook.tsx` calls wagmi's
+  `connect()` directly against the injected connector, bypassing AppKit's
+  modal entirely rather than trying to make the modal itself surface the
+  test wallet. Running it against a real wallet found and fixed three
+  real production bugs, none in the contract:
+  1. `lib/genlayer.ts`'s `buildChain()` built a hand-rolled chain object
+     missing GenLayer runtime fields (`consensusMainContract`) instead of
+     using genlayer-js's own `studionet` — broke every real signed write
+     in production ("Cannot convert undefined to a BigInt").
+  2. Every write function returned only the bare tx hash from
+     `writeContract` and never called `waitForTransactionReceipt`, so the
+     UI declared "confirmed" before consensus actually accepted anything,
+     with no way to recover the hash or the created promise id.
+  3. genlayer-js's default `waitForTransactionReceipt` retry budget (10
+     retries × 3s = 30s) is nowhere near enough for `resolve_promise`/
+     `contest_verdict`/`resolve_contest`/`finalize_promise`, which trigger
+     real LLM adjudication — gave those four a ~7.5-minute budget instead.
+  After all three fixes, the full lifecycle — including the contest
+  branch — passed live through the real UI with two real wallets:
+  `create_promise` → `accept_promise` → authenticated evidence upload →
+  `submit_evidence` → `resolve_promise` → `contest_verdict` →
+  `resolve_contest`, landing `FULFILLED`/`UPHELD` with
+  `stake_deposited_wei: 0`. Also found and fixed a mismatched E2E
+  evidence fixture along the way (it uploaded plain text against a
+  condition requiring HTML, which plausibly biased adjudication toward
+  `UNDETERMINED`) by uploading genuine HTML content instead.
+- **Long-timeout recovery test suite added**
+  (`tests/integration/test_long_timeout_recovery.py`,
+  `scripts/generate_shortened_test_contract.py`, weekly CI workflow):
+  runs the 3-day/48h timeout and recovery paths for real against a
+  test-only build with those three durations shortened to 45s. Found and
+  fixed two bugs in the test tooling itself (not the contract): a gltest
+  contract-name collision from nesting the generated build under
+  `contracts/` (relocated to `_test_builds/long_timeout/`, a sibling
+  outside gltest's recursive search root), and GenVM's version pragma
+  needing to stay the literal first lines of the file (the generator's
+  banner comment was pushing it down, silently breaking every shortened-
+  build deploy). 3 of 4 tests passed live; 1 gracefully skipped on
+  `UNDETERMINED` (the same legitimate LLM-sampling outcome documented
+  elsewhere, not a bug).
+- **Broader evidence-type convergence added**
+  (`tests/integration/test_evidence_type_convergence.py`): n=5 samples
+  each for BROKEN-leaning and compound/partial-condition evidence,
+  extending the original n=3 FULFILLED-leaning sample. Real finding: a
+  deliberately compound two-part condition (satisfies one of two explicit
+  sub-requirements) collapsed to BROKEN 5/5 times rather than
+  `PARTIALLY_FULFILLED`.
+- **External re-audit fixes**: README still named the superseded
+  contract address and described the browser E2E/contest settlement as
+  still open (both had since completed) — fixed. `docs/security.md` had
+  a stale paragraph making the same claim about the contest settlement —
+  fixed. `docs/deployment-manifest.md` and this file both had a stale
+  note implying `docs/live-product-tests.md`'s battery still needed to be
+  re-run against the current address — fixed (it already had been).
+  `docs/release-checklist.md`'s "fast-follows" list still described the
+  signed E2E as blocked and the convergence study as untouched beyond
+  n=3 — both completed, narrowed to the two items that are actually still
+  open (third-party audit, changed-evidence convergence sweep needing a
+  mutable evidence server).
+- Still genuinely open, stated plainly: a formal third-party contract
+  audit, and a "changed evidence" convergence sweep (evidence that shifts
+  between resolve attempts) — needs a controlled mutable evidence server,
+  not built this round. Nothing else from round 7's list remains open.
 
 ## Status log
 - 2026-08-27: Discovery Q&A completed (see Decisions above). Contract
